@@ -117,47 +117,48 @@ export default function ServiceChecklistPage() {
   };
 
   const handleSubmitChecklist = async () => {
-    if (!kmCurrent || isNaN(Number(kmCurrent))) {
-        toast.error('Por favor, insira o KM atual do veículo.');
-        return;
-    }
-
     // Validação: Garantir que todos os itens de 'options' foram respondidos
     let allAnswered = true;
-    const totalItems = items.length;
-    let answeredCount = 0;
+    let kmItemAnswer: string | undefined;
 
     sections.forEach(section => {
       const sectionItems = items.filter(item => item.section_id === section.id);
       sectionItems.forEach(item => {
         const answer = checklistData[section.id]?.[item.id];
         
+        // Se o item for o KM Atual (assumindo que o título ou tipo indica isso)
+        if (item.title.toLowerCase().includes('km atual') || item.title.toLowerCase().includes('quilometragem')) {
+            kmItemAnswer = answer;
+        }
+
         if (item.response_type === 'options' && !answer) {
           allAnswered = false;
         }
-        
-        // Para 'text' e 'datetime', consideramos respondido se houver algum valor
-        if (answer) {
-          answeredCount++;
-        }
       });
     });
+    
+    // Validação do KM (se houver um campo de KM no checklist)
+    if (kmItemAnswer && (isNaN(Number(kmItemAnswer)) || Number(kmItemAnswer) <= 0)) {
+        toast.error('Por favor, insira um valor válido para o KM atual no checklist.');
+        return;
+    }
 
     if (!allAnswered) {
       toast.warning(`Alguns itens de múltipla escolha não foram respondidos.`);
-      // Permitir salvar rascunho, mas avisar
     }
 
     setSubmitting(true);
 
     try {
-      // 1. Atualizar o KM atual do veículo
-      const { error: vehicleUpdateError } = await supabase
-        .from('vehicles')
-        .update({ km_current: Number(kmCurrent), updated_at: new Date().toISOString() })
-        .eq('id', service?.vehicle_id);
+      // 1. Atualizar o KM atual do veículo APENAS se o valor foi preenchido no checklist
+      if (kmItemAnswer && service?.vehicle_id) {
+        const { error: vehicleUpdateError } = await supabase
+          .from('vehicles')
+          .update({ km_current: Number(kmItemAnswer), updated_at: new Date().toISOString() })
+          .eq('id', service.vehicle_id);
 
-      if (vehicleUpdateError) throw vehicleUpdateError;
+        if (vehicleUpdateError) throw vehicleUpdateError;
+      }
 
       // 2. Atualizar o serviço
       const { error: serviceUpdateError } = await supabase
@@ -248,22 +249,7 @@ export default function ServiceChecklistPage() {
                     <p className="text-gray-400">Veículo: <span className="text-white font-medium">{vehicle?.model} ({vehicle?.plate})</span></p>
                 </div>
             </div>
-            
-            <div className="space-y-2">
-                <Label htmlFor="km-current" className="text-gray-300 flex items-center gap-2">
-                    <Gauge className="w-4 h-4" />
-                    KM Atual
-                </Label>
-                <Input
-                    id="km-current"
-                    type="number"
-                    placeholder="Insira o KM atual"
-                    value={kmCurrent}
-                    onChange={(e) => setKmCurrent(e.target.value)}
-                    required
-                    className="bg-[#0a0a0a] border-[#2a2a2a] text-white"
-                />
-            </div>
+            {/* O campo KM Atual foi removido daqui */}
           </CardContent>
         </Card>
 
