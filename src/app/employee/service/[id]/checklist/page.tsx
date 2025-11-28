@@ -19,6 +19,16 @@ interface ChecklistData {
   };
 }
 
+// Função auxiliar para formatar data/hora para input datetime-local
+const formatDateTimeLocal = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 export default function ServiceChecklistPage() {
   const router = useRouter();
   const params = useParams();
@@ -33,6 +43,8 @@ export default function ServiceChecklistPage() {
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [checklistData, setChecklistData] = useState<ChecklistData>({});
   const [observations, setObservations] = useState('');
+  
+  // Estado para armazenar o KM atual do veículo (usado para atualização no DB)
   const [kmCurrent, setKmCurrent] = useState<number | string>('');
 
   useEffect(() => {
@@ -62,13 +74,15 @@ export default function ServiceChecklistPage() {
         return;
       }
       
-      setService(serviceData as Service);
-      setClient(serviceData.client as Client);
-      setVehicle(serviceData.vehicle as Vehicle);
-      setObservations(serviceData.observations || '');
-      setChecklistData(serviceData.checklist_data || {});
-      setKmCurrent(serviceData.vehicle?.km_current || '');
-
+      const loadedService = serviceData as Service & { client: Client, vehicle: Vehicle };
+      
+      setService(loadedService);
+      setClient(loadedService.client);
+      setVehicle(loadedService.vehicle);
+      setObservations(loadedService.observations || '');
+      
+      const initialChecklistData = loadedService.checklist_data || {};
+      
       // 2. Carregar Checklist (Seções e Itens)
       const { data: sectionsData, error: sectionsError } = await supabase
         .from('checklist_sections')
@@ -84,8 +98,46 @@ export default function ServiceChecklistPage() {
 
       if (itemsError) throw itemsError;
 
-      setSections(sectionsData as ChecklistSection[] || []);
-      setItems(itemsData as ChecklistItem[] || []);
+      const loadedSections = sectionsData as ChecklistSection[] || [];
+      const loadedItems = itemsData as ChecklistItem[] || [];
+      
+      // 3. Preenchimento Automático de Dados do Veículo e Data/Hora
+      const autoFilledData: ChecklistData = {};
+      const now = formatDateTimeLocal(new Date());
+
+      loadedSections.forEach(section => {
+        loadedItems.filter(item => item.section_id === section.id).forEach(item => {
+          const itemTitleLower = item.title.toLowerCase();
+          let autoValue = initialChecklistData[section.id]?.[item.id];
+
+          if (!autoValue) {
+            if (itemTitleLower.includes('tipo') && loadedService.vehicle?.type) {
+              autoValue = loadedService.vehicle.type;
+            } else if (itemTitleLower.includes('modelo') && loadedService.vehicle?.model) {
+              autoValue = loadedService.vehicle.model;
+            } else if (itemTitleLower.includes('placa') && loadedService.vehicle?.plate) {
+              autoValue = loadedService.vehicle.plate;
+            } else if (itemTitleLower.includes('km atual') && loadedService.vehicle?.km_current !== undefined) {
+              // KM atual é o único que pode ser editado, mas preenchemos com o último valor conhecido
+              autoValue = String(loadedService.vehicle.km_current);
+            } else if (itemTitleLower.includes('data e hora da inspeção') && item.response_type === 'datetime') {
+              // Preenche automaticamente com a hora de início da inspeção
+              autoValue = now;
+            }
+          }
+          
+          if (autoValue !== undefined) {
+            autoFilledData[section.id] = {
+              ...(autoFilledData[section.id] || {}),
+              [item.id]: autoValue,
+            };
+          }
+        });
+      });
+      
+      setChecklistData({ ...initialChecklistData, ...autoFilledData });
+      setSections(loadedSections);
+      setItems(loadedItems);
 
     } catch (error) {
       console.error('Erro ao carregar dados do serviço:', error);
@@ -117,22 +169,24 @@ export default function ServiceChecklistPage() {
   };
 
   const handleSubmitChecklist = async () => {
-    // Validação: Garantir que todos os itens de 'options' foram respondidos
-    let allAnswered = true;
     let kmItemAnswer: string | undefined;
+    let allOptionsAnswered = true;
 
     sections.forEach(section => {
       const sectionItems = items.filter(item => item.section_id === section.id);
       sectionItems.forEach(item => {
         const answer = checklistData[section.id]?.[item.id];
         
-        // Se o item for o KM Atual (assumindo que o título ou tipo indica isso)
-        if (item.title.toLowerCase().includes('km atual') || item.title.toLowerCase().includes('quilometragem')) {
+        const itemTitleLower = item.title.toLowerCase();
+
+        // 1. Capturar KM Atual
+        if (itemTitleLower.includes('km atual') || itemTitleLower.includes('quilometragem')) {
             kmItemAnswer = answer;
         }
 
+        // 2. Validar se todas as opções foram respondidas
         if (item.response_type === 'options' && !answer) {
-          allAnswered = false;
+          allOptionsAnswered = false;
         }
       });
     });
@@ -143,7 +197,7 @@ export default function ServiceChecklistPage() {
         return;
     }
 
-    if (!allAnswered) {
+    if (!allOptionsAnswered) {
       toast.warning(`Alguns itens de múltipla escolha não foram respondidos.`);
     }
 
@@ -249,7 +303,6 @@ export default function ServiceChecklistPage() {
                     <p className="text-gray-400">Veículo: <span className="text-white font-medium">{vehicle?.model} ({vehicle?.plate})</span></p>
                 </div>
             </div>
-            {/* O campo KM Atual foi removido daqui */}
           </CardContent>
         </Card>
 
@@ -267,7 +320,20 @@ export default function ServiceChecklistPage() {
               <CardContent className="space-y-4">
                 {sectionItems.map((item) => {
                   const currentAnswer = checklistData[section.id]?.[item.id] || '';
+                  const itemTitleLower = item.title.toLowerCase();
                   
+                  // Determinar se o campo deve ser desabilitado (preenchimento automático)
+                  const isAutoFilled = 
+                    itemTitleLower.includes('tipo') || 
+                    itemTitleLower.includes('modelo') || 
+                    itemTitleLower.includes('placa') ||
+                    (itemTitleLower.includes('data e hora da inspeção') && item.response_type === 'datetime');
+                  
+                  // KM Atual é preenchido automaticamente, mas pode ser editado
+                  const isKmField = itemTitleLower.includes('km atual') || itemTitleLower.includes('quilometragem');
+                  
+                  const isDisabled = isAutoFilled && !isKmField;
+
                   return (
                     <div key={item.id} className="space-y-2 p-3 border border-[#2a2a2a] rounded-lg">
                       <Label className="text-gray-300 flex items-center justify-between">
@@ -296,6 +362,7 @@ export default function ServiceChecklistPage() {
                           value={currentAnswer}
                           onValueChange={(value) => handleAnswerChange(section.id, item.id, value)}
                           className="flex flex-wrap gap-4"
+                          disabled={isDisabled}
                         >
                           {item.options.map((option) => (
                             <div key={option} className="flex items-center space-x-2">
@@ -303,8 +370,9 @@ export default function ServiceChecklistPage() {
                                 value={option} 
                                 id={`${item.id}-${option}`} 
                                 className="border-gray-500 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                                disabled={isDisabled}
                               />
-                              <Label htmlFor={`${item.id}-${option}`} className="text-sm text-gray-400 cursor-pointer">
+                              <Label htmlFor={`${item.id}-${option}`} className={`text-sm cursor-pointer ${isDisabled ? 'text-gray-600' : 'text-gray-400'}`}>
                                 {option}
                               </Label>
                             </div>
@@ -316,17 +384,20 @@ export default function ServiceChecklistPage() {
                           value={currentAnswer}
                           onChange={(e) => handleAnswerChange(section.id, item.id, e.target.value)}
                           required
-                          className="bg-[#0a0a0a] border-[#2a2a2a] text-white"
+                          disabled={isDisabled}
+                          className={`bg-[#0a0a0a] border-[#2a2a2a] text-white ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                         />
                       ) : (
                         <Input
-                          type="text"
+                          type={isKmField ? 'number' : 'text'}
                           placeholder="Insira a observação ou valor..."
                           value={currentAnswer}
                           onChange={(e) => handleAnswerChange(section.id, item.id, e.target.value)}
-                          className="bg-[#0a0a0a] border-[#2a2a2a] text-white"
+                          disabled={isDisabled}
+                          className={`bg-[#0a0a0a] border-[#2a2a2a] text-white ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                         />
                       )}
+                      {isDisabled && <p className="text-xs text-yellow-500 mt-1">Preenchido automaticamente com dados do cadastro.</p>}
                     </div>
                   );
                 })}
