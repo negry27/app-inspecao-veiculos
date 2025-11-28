@@ -352,7 +352,11 @@ export default function ServiceChecklistPage() {
                         {currentAnswer && item.response_type === 'datetime' && (
                           <div className="flex items-center gap-2 text-xs text-gray-400">
                             <Clock className="w-3 h-3" />
-                            {new Date(currentAnswer).toLocaleString('pt-BR')}
+                            {/* Exibição no formato pt-BR */}
+                            {new Date(currentAnswer).toLocaleString('pt-BR', {
+                                dateStyle: 'short',
+                                timeStyle: 'short',
+                            })}
                           </div>
                         )}
                       </Label>

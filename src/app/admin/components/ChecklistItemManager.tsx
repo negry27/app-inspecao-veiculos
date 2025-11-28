@@ -51,6 +51,7 @@ export default function ChecklistItemManager({ sectionId, items, onUpdate }: Che
 
     const optionsArray = formData.options.split(',').map(opt => opt.trim()).filter(opt => opt.length > 0);
     
+    // Se o tipo for 'options', as opções são obrigatórias
     if (formData.response_type === 'options' && optionsArray.length === 0) {
         toast.error('Para o tipo "Opções", as opções não podem estar vazias.');
         setLoading(false);
@@ -144,7 +145,7 @@ export default function ChecklistItemManager({ sectionId, items, onUpdate }: Che
                 <Label htmlFor="response_type">Tipo de Resposta</Label>
                 <Select 
                   value={formData.response_type} 
-                  onValueChange={(value: ResponseType) => setFormData({ ...formData, response_type: value })}
+                  onValueChange={(value: ResponseType) => setFormData({ ...formData, response_type: value, options: '' })} // Limpa opções ao mudar o tipo
                 >
                   <SelectTrigger id="response_type" className="bg-[#0a0a0a] border-[#2a2a2a]">
                     <SelectValue placeholder="Selecione o tipo" />
