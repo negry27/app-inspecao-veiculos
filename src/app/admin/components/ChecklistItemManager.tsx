@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Edit, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -22,12 +23,13 @@ export default function ChecklistItemManager({ sectionId, items, onUpdate }: Che
     title: '',
     options: '', // Comma separated string
     order: 0,
+    response_type: 'options' as 'options' | 'text',
   });
   const [loading, setLoading] = useState(false);
 
   const resetForm = () => {
     setEditingItem(null);
-    setFormData({ title: '', options: '', order: 0 });
+    setFormData({ title: '', options: '', order: 0, response_type: 'options' });
   };
 
   const openEditDialog = (item: ChecklistItem) => {
@@ -36,6 +38,7 @@ export default function ChecklistItemManager({ sectionId, items, onUpdate }: Che
       title: item.title,
       options: item.options.join(', '),
       order: item.order,
+      response_type: item.response_type,
     });
     setDialogOpen(true);
   };
@@ -46,8 +49,8 @@ export default function ChecklistItemManager({ sectionId, items, onUpdate }: Che
 
     const optionsArray = formData.options.split(',').map(opt => opt.trim()).filter(opt => opt.length > 0);
     
-    if (optionsArray.length === 0) {
-        toast.error('As opções não podem estar vazias.');
+    if (formData.response_type === 'options' && optionsArray.length === 0) {
+        toast.error('Para o tipo "Opções", as opções não podem estar vazias.');
         setLoading(false);
         return;
     }
@@ -55,8 +58,9 @@ export default function ChecklistItemManager({ sectionId, items, onUpdate }: Che
     const itemData = {
       section_id: sectionId,
       title: formData.title,
-      options: optionsArray,
+      options: formData.response_type === 'options' ? optionsArray : [], // Salva opções apenas se for tipo 'options'
       order: formData.order,
+      response_type: formData.response_type, // Novo campo
     };
 
     try {
@@ -130,17 +134,37 @@ export default function ChecklistItemManager({ sectionId, items, onUpdate }: Che
                   className="bg-[#0a0a0a] border-[#2a2a2a]"
                 />
               </div>
+              
               <div className="space-y-2">
-                <Label htmlFor="options">Opções (separadas por vírgula)</Label>
-                <Input
-                  id="options"
-                  value={formData.options}
-                  onChange={(e) => setFormData({ ...formData, options: e.target.value })}
-                  required
-                  placeholder="Ex: Ok, Gasto, Trocar"
-                  className="bg-[#0a0a0a] border-[#2a2a2a]"
-                />
+                <Label htmlFor="response_type">Tipo de Resposta</Label>
+                <Select 
+                  value={formData.response_type} 
+                  onValueChange={(value: 'options' | 'text') => setFormData({ ...formData, response_type: value })}
+                >
+                  <SelectTrigger id="response_type" className="bg-[#0a0a0a] border-[#2a2a2a]">
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1a1a1a] border-[#2a2a2a]">
+                    <SelectItem value="options">Opções (Radio Group)</SelectItem>
+                    <SelectItem value="text">Texto Livre (Input)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+
+              {formData.response_type === 'options' && (
+                <div className="space-y-2">
+                  <Label htmlFor="options">Opções (separadas por vírgula)</Label>
+                  <Input
+                    id="options"
+                    value={formData.options}
+                    onChange={(e) => setFormData({ ...formData, options: e.target.value })}
+                    required
+                    placeholder="Ex: Ok, Gasto, Trocar"
+                    className="bg-[#0a0a0a] border-[#2a2a2a]"
+                  />
+                </div>
+              )}
+              
               <div className="space-y-2">
                 <Label htmlFor="order">Ordem</Label>
                 <Input
@@ -167,7 +191,8 @@ export default function ChecklistItemManager({ sectionId, items, onUpdate }: Che
               <div>
                 <p className="text-white text-sm font-medium">{item.title} (Ordem: {item.order})</p>
                 <p className="text-gray-400 text-xs mt-1">
-                  Opções: {item.options.join(', ')}
+                  Tipo: <span className="capitalize">{item.response_type}</span>
+                  {item.response_type === 'options' && ` | Opções: ${item.options.join(', ')}`}
                 </p>
               </div>
               <div className="flex gap-2">

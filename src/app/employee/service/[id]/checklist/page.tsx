@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 
 interface ChecklistData {
   [sectionId: string]: {
-    [itemId: string]: string; // value of the selected option
+    [itemId: string]: string; // value of the selected option or text input
   };
 }
 
@@ -95,7 +95,7 @@ export default function ServiceChecklistPage() {
     }
   };
 
-  const handleOptionChange = (sectionId: string, itemId: string, value: string) => {
+  const handleAnswerChange = (sectionId: string, itemId: string, value: string) => {
     setChecklistData(prev => ({
       ...prev,
       [sectionId]: {
@@ -122,7 +122,7 @@ export default function ServiceChecklistPage() {
         return;
     }
 
-    // Validação: Garantir que todos os itens foram respondidos
+    // Validação: Garantir que todos os itens de 'options' foram respondidos
     let allAnswered = true;
     const totalItems = items.length;
     let answeredCount = 0;
@@ -130,16 +130,20 @@ export default function ServiceChecklistPage() {
     sections.forEach(section => {
       const sectionItems = items.filter(item => item.section_id === section.id);
       sectionItems.forEach(item => {
-        if (!checklistData[section.id] || !checklistData[section.id][item.id]) {
+        const answer = checklistData[section.id]?.[item.id];
+        
+        if (item.response_type === 'options' && !answer) {
           allAnswered = false;
-        } else {
+        }
+        
+        if (answer) {
           answeredCount++;
         }
       });
     });
 
     if (!allAnswered) {
-      toast.warning(`Faltam ${totalItems - answeredCount} itens para responder no checklist.`);
+      toast.warning(`Alguns itens de múltipla escolha não foram respondidos.`);
       // Permitir salvar rascunho, mas avisar
     }
 
@@ -274,37 +278,57 @@ export default function ServiceChecklistPage() {
                 <CardTitle className="text-white text-lg">{section.title}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {sectionItems.map((item) => (
-                  <div key={item.id} className="space-y-2 p-3 border border-[#2a2a2a] rounded-lg">
-                    <Label className="text-gray-300 flex items-center justify-between">
-                      {item.title}
-                      {checklistData[section.id]?.[item.id] && (
-                        <div className="flex items-center gap-2 text-xs text-gray-400">
-                          {getStatusIcon(checklistData[section.id][item.id])}
-                          {checklistData[section.id][item.id]}
-                        </div>
+                {sectionItems.map((item) => {
+                  const currentAnswer = checklistData[section.id]?.[item.id] || '';
+                  
+                  return (
+                    <div key={item.id} className="space-y-2 p-3 border border-[#2a2a2a] rounded-lg">
+                      <Label className="text-gray-300 flex items-center justify-between">
+                        {item.title}
+                        {currentAnswer && item.response_type === 'options' && (
+                          <div className="flex items-center gap-2 text-xs text-gray-400">
+                            {getStatusIcon(currentAnswer)}
+                            {currentAnswer}
+                          </div>
+                        )}
+                        {currentAnswer && item.response_type === 'text' && (
+                          <div className="text-xs text-gray-400 truncate max-w-[50%]">
+                            {currentAnswer}
+                          </div>
+                        )}
+                      </Label>
+                      
+                      {item.response_type === 'options' ? (
+                        <RadioGroup 
+                          value={currentAnswer}
+                          onValueChange={(value) => handleAnswerChange(section.id, item.id, value)}
+                          className="flex flex-wrap gap-4"
+                        >
+                          {item.options.map((option) => (
+                            <div key={option} className="flex items-center space-x-2">
+                              <RadioGroupItem 
+                                value={option} 
+                                id={`${item.id}-${option}`} 
+                                className="border-gray-500 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                              />
+                              <Label htmlFor={`${item.id}-${option}`} className="text-sm text-gray-400 cursor-pointer">
+                                {option}
+                              </Label>
+                            </div>
+                          ))}
+                        </RadioGroup>
+                      ) : (
+                        <Input
+                          type="text"
+                          placeholder="Insira a observação ou valor..."
+                          value={currentAnswer}
+                          onChange={(e) => handleAnswerChange(section.id, item.id, e.target.value)}
+                          className="bg-[#0a0a0a] border-[#2a2a2a] text-white"
+                        />
                       )}
-                    </Label>
-                    <RadioGroup 
-                      value={checklistData[section.id]?.[item.id] || ''}
-                      onValueChange={(value) => handleOptionChange(section.id, item.id, value)}
-                      className="flex flex-wrap gap-4"
-                    >
-                      {item.options.map((option) => (
-                        <div key={option} className="flex items-center space-x-2">
-                          <RadioGroupItem 
-                            value={option} 
-                            id={`${item.id}-${option}`} 
-                            className="border-gray-500 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-                          />
-                          <Label htmlFor={`${item.id}-${option}`} className="text-sm text-gray-400 cursor-pointer">
-                            {option}
-                          </Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                  </div>
-                ))}
+                    </div>
+                  );
+                })}
               </CardContent>
             </Card>
           );

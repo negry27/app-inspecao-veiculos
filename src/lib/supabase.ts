@@ -69,6 +69,7 @@ export interface ChecklistItem {
   title: string;
   options: string[];
   order: number;
+  response_type: 'options' | 'text'; // Novo campo
   created_at: string;
 }
 
