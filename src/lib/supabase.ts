@@ -69,7 +69,7 @@ export interface ChecklistItem {
   title: string;
   options: string[];
   order: number;
-  response_type: 'options' | 'text' | 'datetime'; // Novo tipo adicionado
+  response_type: 'options' | 'text' | 'datetime' | 'autofill'; // Novo tipo adicionado
   created_at: string;
 }
 

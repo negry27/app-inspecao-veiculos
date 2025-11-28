@@ -16,7 +16,7 @@ interface ChecklistItemManagerProps {
   onUpdate: () => void;
 }
 
-type ResponseType = 'options' | 'text' | 'datetime';
+type ResponseType = 'options' | 'text' | 'datetime' | 'autofill';
 
 export default function ChecklistItemManager({ sectionId, items, onUpdate }: ChecklistItemManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -58,7 +58,7 @@ export default function ChecklistItemManager({ sectionId, items, onUpdate }: Che
         return;
     }
     
-    // Se o tipo não for 'options', as opções devem ser vazias
+    // Se o tipo não for 'options' ou 'autofill', as opções devem ser vazias
     const finalOptions = formData.response_type === 'options' ? optionsArray : [];
 
     const itemData = {
@@ -154,6 +154,7 @@ export default function ChecklistItemManager({ sectionId, items, onUpdate }: Che
                     <SelectItem value="options">Opções (Radio Group)</SelectItem>
                     <SelectItem value="text">Texto Livre (Input)</SelectItem>
                     <SelectItem value="datetime">Data e Hora</SelectItem>
+                    <SelectItem value="autofill">Preenchimento (Autofill)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

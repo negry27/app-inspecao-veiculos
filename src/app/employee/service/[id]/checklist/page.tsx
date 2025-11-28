@@ -63,7 +63,7 @@ export default function ServiceChecklistPage() {
       // 1. Carregar Serviço e relacionamentos
       const { data: serviceData, error: serviceError } = await supabase
         .from('services')
-        .select('*, client:client_id(*), vehicle:vehicle_id(*)')
+        .select('*, client:client_id(*), vehicle:vehicle_id(*), employee:employee_id(*)')
         .eq('id', serviceId)
         .single();
 
@@ -74,7 +74,7 @@ export default function ServiceChecklistPage() {
         return;
       }
       
-      const loadedService = serviceData as Service & { client: Client, vehicle: Vehicle };
+      const loadedService = serviceData as Service & { client: Client, vehicle: Vehicle, employee: any };
       
       setService(loadedService);
       setClient(loadedService.client);
@@ -101,16 +101,17 @@ export default function ServiceChecklistPage() {
       const loadedSections = sectionsData as ChecklistSection[] || [];
       const loadedItems = itemsData as ChecklistItem[] || [];
       
-      // 3. Preenchimento Automático de Dados do Veículo e Data/Hora
+      // 3. Preenchimento Automático de Dados
       const autoFilledData: ChecklistData = {};
       const now = formatDateTimeLocal(new Date());
 
       loadedSections.forEach(section => {
         loadedItems.filter(item => item.section_id === section.id).forEach(item => {
-          const itemTitleLower = item.title.toLowerCase();
           let autoValue = initialChecklistData[section.id]?.[item.id];
 
-          if (!autoValue) {
+          if (item.response_type === 'autofill' && !autoValue) {
+            const itemTitleLower = item.title.toLowerCase();
+            
             if (itemTitleLower.includes('tipo') && loadedService.vehicle?.type) {
               autoValue = loadedService.vehicle.type;
             } else if (itemTitleLower.includes('modelo') && loadedService.vehicle?.model) {
@@ -118,12 +119,15 @@ export default function ServiceChecklistPage() {
             } else if (itemTitleLower.includes('placa') && loadedService.vehicle?.plate) {
               autoValue = loadedService.vehicle.plate;
             } else if (itemTitleLower.includes('km atual') && loadedService.vehicle?.km_current !== undefined) {
-              // KM atual é o único que pode ser editado, mas preenchemos com o último valor conhecido
               autoValue = String(loadedService.vehicle.km_current);
-            } else if (itemTitleLower.includes('data e hora da inspeção') && item.response_type === 'datetime') {
-              // Preenche automaticamente com a hora de início da inspeção
-              autoValue = now;
+            } else if (itemTitleLower.includes('cliente') && loadedService.client?.name) {
+              autoValue = loadedService.client.name;
+            } else if (itemTitleLower.includes('funcionário') && loadedService.employee?.username) {
+              autoValue = loadedService.employee.username;
             }
+          } else if (item.response_type === 'datetime' && item.title.toLowerCase().includes('data e hora da inspeção') && !autoValue) {
+            // Preenche automaticamente com a hora de início da inspeção
+            autoValue = now;
           }
           
           if (autoValue !== undefined) {
@@ -322,17 +326,13 @@ export default function ServiceChecklistPage() {
                   const currentAnswer = checklistData[section.id]?.[item.id] || '';
                   const itemTitleLower = item.title.toLowerCase();
                   
-                  // Determinar se o campo deve ser desabilitado (preenchimento automático)
-                  const isAutoFilled = 
-                    itemTitleLower.includes('tipo') || 
-                    itemTitleLower.includes('modelo') || 
-                    itemTitleLower.includes('placa') ||
-                    (itemTitleLower.includes('data e hora da inspeção') && item.response_type === 'datetime');
+                  // Determinar se o campo deve ser desabilitado
+                  const isAutofillField = item.response_type === 'autofill';
                   
-                  // KM Atual é preenchido automaticamente, mas pode ser editado
+                  // KM Atual é um campo de texto/número que é preenchido automaticamente, mas pode ser editado
                   const isKmField = itemTitleLower.includes('km atual') || itemTitleLower.includes('quilometragem');
                   
-                  const isDisabled = isAutoFilled && !isKmField;
+                  const isDisabled = isAutofillField && !isKmField;
 
                   return (
                     <div key={item.id} className="space-y-2 p-3 border border-[#2a2a2a] rounded-lg">
@@ -344,7 +344,7 @@ export default function ServiceChecklistPage() {
                             {currentAnswer}
                           </div>
                         )}
-                        {currentAnswer && item.response_type === 'text' && (
+                        {currentAnswer && (item.response_type === 'text' || item.response_type === 'autofill') && (
                           <div className="text-xs text-gray-400 truncate max-w-[50%]">
                             {currentAnswer}
                           </div>
@@ -352,7 +352,6 @@ export default function ServiceChecklistPage() {
                         {currentAnswer && item.response_type === 'datetime' && (
                           <div className="flex items-center gap-2 text-xs text-gray-400">
                             <Clock className="w-3 h-3" />
-                            {/* Exibição no formato pt-BR */}
                             {new Date(currentAnswer).toLocaleString('pt-BR', {
                                 dateStyle: 'short',
                                 timeStyle: 'short',
@@ -394,14 +393,14 @@ export default function ServiceChecklistPage() {
                       ) : (
                         <Input
                           type={isKmField ? 'number' : 'text'}
-                          placeholder="Insira a observação ou valor..."
+                          placeholder={isDisabled ? 'Preenchido automaticamente' : 'Insira a observação ou valor...'}
                           value={currentAnswer}
                           onChange={(e) => handleAnswerChange(section.id, item.id, e.target.value)}
                           disabled={isDisabled}
                           className={`bg-[#0a0a0a] border-[#2a2a2a] text-white ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                         />
                       )}
-                      {isDisabled && <p className="text-xs text-yellow-500 mt-1">Preenchido automaticamente com dados do cadastro.</p>}
+                      {isDisabled && <p className="text-xs text-yellow-500 mt-1">Preenchido automaticamente com dados do sistema.</p>}
                     </div>
                   );
                 })}
