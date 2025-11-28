@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, Service, Client, Vehicle, User, ChecklistSection, ChecklistItem } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,18 +9,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, FileText, Download, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { generateServicePDF } from '@/lib/pdf-generator';
+import { generateAndUploadPDF } from '@/lib/pdf-utils';
+
+// Tipo auxiliar para o serviço com dados de relacionamento
+interface ServiceWithDetails extends Service {
+  client: Client;
+  vehicle: Vehicle;
+  employee: User;
+}
 
 export default function ServicesTab() {
-  const [services, setServices] = useState<any[]>([]);
+  const [services, setServices] = useState<ServiceWithDetails[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedService, setSelectedService] = useState<any>(null);
+  const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     client_id: '',
@@ -36,19 +43,32 @@ export default function ServicesTab() {
 
   const loadData = async () => {
     try {
-      const [servicesData, clientsData, vehiclesData, employeesData] = await Promise.all([
-        supabase.from('services').select('*').order('created_at', { ascending: false }),
+      // Buscar serviços com dados aninhados
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services')
+        .select(`
+          *,
+          client:client_id(*),
+          vehicle:vehicle_id(*),
+          employee:employee_id(*)
+        `)
+        .order('created_at', { ascending: false });
+
+      // Buscar listas para o formulário
+      const [clientsData, vehiclesData, employeesData] = await Promise.all([
         supabase.from('clients').select('*'),
         supabase.from('vehicles').select('*'),
         supabase.from('users').select('*').eq('role', 'employee')
       ]);
 
-      if (servicesData.error) throw servicesData.error;
+      if (servicesError) throw servicesError;
       if (clientsData.error) throw clientsData.error;
       if (vehiclesData.error) throw vehiclesData.error;
       if (employeesData.error) throw employeesData.error;
 
-      setServices(servicesData.data || []);
+      // O Supabase retorna relacionamentos aninhados como objetos, mas a tipagem pode ser complexa.
+      // Assumimos que a query acima retorna os objetos diretamente.
+      setServices(servicesData as ServiceWithDetails[] || []);
       setClients(clientsData.data || []);
       setVehicles(vehiclesData.data || []);
       setEmployees(employeesData.data || []);
@@ -67,7 +87,7 @@ export default function ServicesTab() {
         .from('services')
         .insert([{
           ...formData,
-          checklist_data: {}, // Placeholder for checklist data
+          checklist_data: {}, // Inicialmente vazio
           created_at: new Date().toISOString()
         }]);
 
@@ -95,53 +115,54 @@ export default function ServicesTab() {
     }
   };
 
-  const handleGeneratePDF = async (service: any) => {
+  const handleGeneratePDF = async (service: ServiceWithDetails) => {
+    if (service.pdf_url) {
+      // Se o PDF já existe, apenas abre a URL
+      window.open(service.pdf_url, '_blank');
+      return;
+    }
+    
+    setPdfLoadingId(service.id);
+
     try {
-      // Simulate PDF generation with placeholder data
-      const pdfData = {
-        employee: {
-          name: service.employee_name || 'Funcionário',
-          cargo: 'Funcionário'
-        },
-        client: {
-          name: service.client_name || 'Cliente',
-          phone: service.client_phone || 'Telefone'
-        },
-        vehicle: {
-          type: service.vehicle_type || 'Carro',
-          model: service.vehicle_model || 'Modelo',
-          plate: service.vehicle_plate || 'Placa',
-          km: service.vehicle_km || 0
-        },
-        checklist: [
-          {
-            section: 'Inspeção Geral',
-            items: [
-              { title: 'Pintura', value: 'Ok' },
-              { title: 'Pneus', value: 'Bons' }
-            ]
-          }
-        ],
-        observations: service.observations || '',
-        photos: [],
-        date: new Date().toLocaleDateString('pt-BR')
+      // 1. Buscar dados completos do checklist e itens
+      const [sectionsRes, itemsRes] = await Promise.all([
+        supabase.from('checklist_sections').select('*').order('order', { ascending: true }),
+        supabase.from('checklist_items').select('*').order('order', { ascending: true })
+      ]);
+
+      if (sectionsRes.error) throw sectionsRes.error;
+      if (itemsRes.error) throw itemsRes.error;
+
+      const details = {
+        service: service,
+        client: service.client,
+        vehicle: service.vehicle,
+        employee: service.employee,
+        sections: sectionsRes.data as ChecklistSection[],
+        items: itemsRes.data as ChecklistItem[],
       };
 
-      const pdfBlob = await generateServicePDF(pdfData);
+      // 2. Gerar e fazer upload do PDF
+      const pdfResult = await generateAndUploadPDF(details);
       
-      // Create download link
-      const url = URL.createObjectURL(pdfBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `relatorio-${service.id}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      if (!pdfResult.success || !pdfResult.pdfUrl) {
+        throw new Error(pdfResult.error || 'Falha ao gerar PDF.');
+      }
       
-      toast.success('PDF gerado com sucesso!');
+      toast.success('PDF gerado e salvo com sucesso!');
+      
+      // 3. Recarregar dados para atualizar a URL do PDF na lista
+      loadData(); 
+      
+      // 4. Abrir o PDF recém-gerado
+      window.open(pdfResult.pdfUrl, '_blank');
+
     } catch (error) {
-      toast.error('Erro ao gerar PDF');
+      console.error('Erro ao gerar PDF:', error);
+      toast.error('Erro ao gerar PDF. Verifique se o checklist foi preenchido.');
+    } finally {
+      setPdfLoadingId(null);
     }
   };
 
@@ -235,16 +256,21 @@ export default function ServicesTab() {
           <Card key={service.id} className="bg-[#1a1a1a] border-[#2a2a2a]">
             <CardHeader>
               <CardTitle className="text-white flex items-center justify-between">
-                <span>Serviço #{service.id}</span>
+                <span>Serviço #{service.id.substring(0, 8)}...</span>
                 <div className="flex gap-2">
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => handleGeneratePDF(service)}
+                    disabled={pdfLoadingId === service.id}
                     className="bg-green-500/10 border-green-500/20 text-green-500 hover:bg-green-500/20"
                   >
-                    <Download className="w-3 h-3 mr-1" />
-                    PDF
+                    {pdfLoadingId === service.id ? (
+                      <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                    ) : (
+                      <Download className="w-3 h-3 mr-1" />
+                    )}
+                    {service.pdf_url ? 'Ver PDF' : 'Gerar PDF'}
                   </Button>
                   <Button
                     size="sm"
@@ -261,15 +287,15 @@ export default function ServicesTab() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-gray-400">Cliente</p>
-                  <p className="text-white">{service.client_name || 'Não informado'}</p>
+                  <p className="text-white">{service.client?.name || 'Não informado'}</p>
                 </div>
                 <div>
                   <p className="text-gray-400">Veículo</p>
-                  <p className="text-white">{service.vehicle_model || 'Não informado'} - {service.vehicle_plate || 'Não informado'}</p>
+                  <p className="text-white">{service.vehicle?.model || 'Não informado'} - {service.vehicle?.plate || 'Não informado'}</p>
                 </div>
                 <div>
                   <p className="text-gray-400">Funcionário</p>
-                  <p className="text-white">{service.employee_name || 'Não informado'}</p>
+                  <p className="text-white">{service.employee?.username || 'Não informado'}</p>
                 </div>
                 <div>
                   <p className="text-gray-400">Data</p>

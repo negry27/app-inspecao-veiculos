@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Loader2, ClipboardList, CheckCircle, XCircle, AlertTriangle, User, Car, Gauge, Clock } from 'lucide-react';
+import { ArrowLeft, Loader2, ClipboardList, CheckCircle, XCircle, AlertTriangle, User, Car, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -46,9 +46,6 @@ export default function ServiceChecklistPage() {
   const [checklistData, setChecklistData] = useState<ChecklistData>({});
   const [observations, setObservations] = useState('');
   
-  // Estado para armazenar o KM atual do veículo (usado para atualização no DB)
-  const [kmCurrent, setKmCurrent] = useState<number | string>('');
-
   useEffect(() => {
     const user = getCurrentUser();
     if (!user || user.role !== 'employee') {
@@ -265,7 +262,29 @@ export default function ServiceChecklistPage() {
 
     } catch (error: any) {
       console.error('Erro ao salvar checklist:', error);
-      toast.error(error.message || 'Erro ao salvar checklist.');
+      
+      // Lógica robusta para extrair a mensagem de erro
+      let errorMessage = 'Erro desconhecido ao salvar checklist.';
+      
+      if (error && typeof error === 'object') {
+        if (error.message) {
+          errorMessage = error.message;
+        } else if (error.details) {
+          // Supabase errors sometimes use 'details'
+          errorMessage = error.details;
+        } else {
+          // Tenta serializar o objeto para obter mais detalhes
+          try {
+            errorMessage = JSON.stringify(error);
+          } catch {
+            errorMessage = String(error);
+          }
+        }
+      } else if (error) {
+        errorMessage = String(error);
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -292,13 +311,13 @@ export default function ServiceChecklistPage() {
             Voltar
           </Button>
         </header>
-        <div className="max-w-4xl mx-auto space-y-6">
+        <main className="max-w-4xl mx-auto space-y-6">
           <Card className="bg-[#1a1a1a] border-[#2a2a2a] p-8 text-center">
             <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-white">Checklist Não Configurado</h2>
             <p className="text-gray-400 mt-2">O administrador ainda não configurou as seções e itens do checklist. Por favor, entre em contato com o administrador.</p>
           </Card>
-        </div>
+        </main>
       </div>
     );
   }
