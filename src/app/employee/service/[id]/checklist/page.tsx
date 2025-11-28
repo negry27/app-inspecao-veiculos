@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Loader2, ClipboardList, CheckCircle, XCircle, AlertTriangle, User, Car, Gauge } from 'lucide-react';
+import { ArrowLeft, Loader2, ClipboardList, CheckCircle, XCircle, AlertTriangle, User, Car, Gauge, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -136,6 +136,7 @@ export default function ServiceChecklistPage() {
           allAnswered = false;
         }
         
+        // Para 'text' e 'datetime', consideramos respondido se houver algum valor
         if (answer) {
           answeredCount++;
         }
@@ -296,6 +297,12 @@ export default function ServiceChecklistPage() {
                             {currentAnswer}
                           </div>
                         )}
+                        {currentAnswer && item.response_type === 'datetime' && (
+                          <div className="flex items-center gap-2 text-xs text-gray-400">
+                            <Clock className="w-3 h-3" />
+                            {new Date(currentAnswer).toLocaleString('pt-BR')}
+                          </div>
+                        )}
                       </Label>
                       
                       {item.response_type === 'options' ? (
@@ -317,6 +324,14 @@ export default function ServiceChecklistPage() {
                             </div>
                           ))}
                         </RadioGroup>
+                      ) : item.response_type === 'datetime' ? (
+                        <Input
+                          type="datetime-local"
+                          value={currentAnswer}
+                          onChange={(e) => handleAnswerChange(section.id, item.id, e.target.value)}
+                          required
+                          className="bg-[#0a0a0a] border-[#2a2a2a] text-white"
+                        />
                       ) : (
                         <Input
                           type="text"

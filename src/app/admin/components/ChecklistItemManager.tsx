@@ -16,6 +16,8 @@ interface ChecklistItemManagerProps {
   onUpdate: () => void;
 }
 
+type ResponseType = 'options' | 'text' | 'datetime';
+
 export default function ChecklistItemManager({ sectionId, items, onUpdate }: ChecklistItemManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ChecklistItem | null>(null);
@@ -23,7 +25,7 @@ export default function ChecklistItemManager({ sectionId, items, onUpdate }: Che
     title: '',
     options: '', // Comma separated string
     order: 0,
-    response_type: 'options' as 'options' | 'text',
+    response_type: 'options' as ResponseType,
   });
   const [loading, setLoading] = useState(false);
 
@@ -38,7 +40,7 @@ export default function ChecklistItemManager({ sectionId, items, onUpdate }: Che
       title: item.title,
       options: item.options.join(', '),
       order: item.order,
-      response_type: item.response_type,
+      response_type: item.response_type as ResponseType,
     });
     setDialogOpen(true);
   };
@@ -54,13 +56,16 @@ export default function ChecklistItemManager({ sectionId, items, onUpdate }: Che
         setLoading(false);
         return;
     }
+    
+    // Se o tipo não for 'options', as opções devem ser vazias
+    const finalOptions = formData.response_type === 'options' ? optionsArray : [];
 
     const itemData = {
       section_id: sectionId,
       title: formData.title,
-      options: formData.response_type === 'options' ? optionsArray : [], // Salva opções apenas se for tipo 'options'
+      options: finalOptions,
       order: formData.order,
-      response_type: formData.response_type, // Novo campo
+      response_type: formData.response_type,
     };
 
     try {
@@ -139,7 +144,7 @@ export default function ChecklistItemManager({ sectionId, items, onUpdate }: Che
                 <Label htmlFor="response_type">Tipo de Resposta</Label>
                 <Select 
                   value={formData.response_type} 
-                  onValueChange={(value: 'options' | 'text') => setFormData({ ...formData, response_type: value })}
+                  onValueChange={(value: ResponseType) => setFormData({ ...formData, response_type: value })}
                 >
                   <SelectTrigger id="response_type" className="bg-[#0a0a0a] border-[#2a2a2a]">
                     <SelectValue placeholder="Selecione o tipo" />
@@ -147,6 +152,7 @@ export default function ChecklistItemManager({ sectionId, items, onUpdate }: Che
                   <SelectContent className="bg-[#1a1a1a] border-[#2a2a2a]">
                     <SelectItem value="options">Opções (Radio Group)</SelectItem>
                     <SelectItem value="text">Texto Livre (Input)</SelectItem>
+                    <SelectItem value="datetime">Data e Hora</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
