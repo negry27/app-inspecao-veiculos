@@ -1,19 +1,7 @@
 export const DEFAULT_CHECKLIST = [
   {
-    title: "Identificação do Veículo",
-    order: 1,
-    items: [
-      { title: "Tipo (Carro/Moto/Van)", options: ["Carro", "Moto", "Van"], order: 1 },
-      { title: "Modelo", options: ["Informado"], order: 2 },
-      { title: "Placa", options: ["Informado"], order: 3 },
-      { title: "KM Atual", options: ["Informado"], order: 4 },
-      { title: "Motorista responsável", options: ["Informado"], order: 5 },
-      { title: "Data e hora da inspeção", options: ["Registrado"], order: 6 }
-    ]
-  },
-  {
     title: "Condição Externa",
-    order: 2,
+    order: 1,
     items: [
       { title: "Pintura", options: ["Ok", "Arranhões", "Amassados"], order: 1 },
       { title: "Para-choques", options: ["Ok", "Danificados"], order: 2 },
@@ -29,7 +17,7 @@ export const DEFAULT_CHECKLIST = [
   },
   {
     title: "Condição Interna",
-    order: 3,
+    order: 2,
     items: [
       { title: "Banco do motorista", options: ["Ok", "Rasgado"], order: 1 },
       { title: "Bancos passageiros", options: ["Ok", "Rasgado"], order: 2 },
@@ -44,7 +32,7 @@ export const DEFAULT_CHECKLIST = [
   },
   {
     title: "Itens de Segurança",
-    order: 4,
+    order: 3,
     items: [
       { title: "Extintor", options: ["Dentro da validade", "Vencido"], order: 1 },
       { title: "Triângulo", options: ["Ok", "Faltando"], order: 2 },
@@ -56,7 +44,7 @@ export const DEFAULT_CHECKLIST = [
   },
   {
     title: "Parte Mecânica",
-    order: 5,
+    order: 4,
     items: [
       { title: "Óleo do motor", options: ["Ok", "Baixo", "Vazando"], order: 1 },
       { title: "Água do radiador", options: ["Ok", "Baixa"], order: 2 },
@@ -71,7 +59,7 @@ export const DEFAULT_CHECKLIST = [
   },
   {
     title: "Limpeza",
-    order: 6,
+    order: 5,
     items: [
       { title: "Lavagem externa", options: ["Feita", "Necessário"], order: 1 },
       { title: "Lavagem interna", options: ["Feita", "Necessário"], order: 2 },
@@ -82,7 +70,7 @@ export const DEFAULT_CHECKLIST = [
   },
   {
     title: "Documentação",
-    order: 7,
+    order: 6,
     items: [
       { title: "Documento do veículo", options: ["No veículo", "Faltando"], order: 1 },
       { title: "IPVA", options: ["Pago", "Pendente"], order: 2 },

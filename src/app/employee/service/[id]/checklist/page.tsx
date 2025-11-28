@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Loader2, ClipboardList, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Loader2, ClipboardList, CheckCircle, XCircle, AlertTriangle, User, Car, Gauge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
-import { supabase, Service, ChecklistSection, ChecklistItem } from '@/lib/supabase';
+import { Input } from '@/components/ui/input';
+import { supabase, Service, ChecklistSection, ChecklistItem, Client, Vehicle } from '@/lib/supabase';
 import { getCurrentUser } from '@/lib/auth';
 import { toast } from 'sonner';
 
@@ -27,10 +27,13 @@ export default function ServiceChecklistPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [service, setService] = useState<Service | null>(null);
+  const [client, setClient] = useState<Client | null>(null);
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [sections, setSections] = useState<ChecklistSection[]>([]);
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [checklistData, setChecklistData] = useState<ChecklistData>({});
   const [observations, setObservations] = useState('');
+  const [kmCurrent, setKmCurrent] = useState<number | string>('');
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -45,10 +48,10 @@ export default function ServiceChecklistPage() {
 
   const loadServiceData = async () => {
     try {
-      // 1. Carregar Serviço
+      // 1. Carregar Serviço e relacionamentos
       const { data: serviceData, error: serviceError } = await supabase
         .from('services')
-        .select('*')
+        .select('*, client:client_id(*), vehicle:vehicle_id(*)')
         .eq('id', serviceId)
         .single();
 
@@ -58,9 +61,13 @@ export default function ServiceChecklistPage() {
         router.push('/employee');
         return;
       }
+      
       setService(serviceData as Service);
+      setClient(serviceData.client as Client);
+      setVehicle(serviceData.vehicle as Vehicle);
       setObservations(serviceData.observations || '');
       setChecklistData(serviceData.checklist_data || {});
+      setKmCurrent(serviceData.vehicle?.km_current || '');
 
       // 2. Carregar Checklist (Seções e Itens)
       const { data: sectionsData, error: sectionsError } = await supabase
@@ -99,16 +106,22 @@ export default function ServiceChecklistPage() {
   };
 
   const getStatusIcon = (value: string) => {
-    if (value.toLowerCase().includes('ok') || value.toLowerCase().includes('bom') || value.toLowerCase().includes('limpo') || value.toLowerCase().includes('pago') || value.toLowerCase().includes('no veículo')) {
+    const lowerValue = value.toLowerCase();
+    if (lowerValue.includes('ok') || lowerValue.includes('bom') || lowerValue.includes('limpo') || lowerValue.includes('pago') || lowerValue.includes('no veículo')) {
       return <CheckCircle className="w-4 h-4 text-green-500" />;
     }
-    if (value.toLowerCase().includes('trocar') || value.toLowerCase().includes('vencido') || value.toLowerCase().includes('faltando') || value.toLowerCase().includes('não funciona') || value.toLowerCase().includes('inativo')) {
+    if (lowerValue.includes('trocar') || lowerValue.includes('vencido') || lowerValue.includes('faltando') || lowerValue.includes('não funciona') || lowerValue.includes('inativo') || lowerValue.includes('danificado') || lowerValue.includes('rasgado')) {
       return <XCircle className="w-4 h-4 text-red-500" />;
     }
     return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
   };
 
   const handleSubmitChecklist = async () => {
+    if (!kmCurrent || isNaN(Number(kmCurrent))) {
+        toast.error('Por favor, insira o KM atual do veículo.');
+        return;
+    }
+
     // Validação: Garantir que todos os itens foram respondidos
     let allAnswered = true;
     const totalItems = items.length;
@@ -127,13 +140,22 @@ export default function ServiceChecklistPage() {
 
     if (!allAnswered) {
       toast.warning(`Faltam ${totalItems - answeredCount} itens para responder no checklist.`);
-      // return; // Permitir salvar rascunho, mas avisar
+      // Permitir salvar rascunho, mas avisar
     }
 
     setSubmitting(true);
 
     try {
-      const { error } = await supabase
+      // 1. Atualizar o KM atual do veículo
+      const { error: vehicleUpdateError } = await supabase
+        .from('vehicles')
+        .update({ km_current: Number(kmCurrent), updated_at: new Date().toISOString() })
+        .eq('id', service?.vehicle_id);
+
+      if (vehicleUpdateError) throw vehicleUpdateError;
+
+      // 2. Atualizar o serviço
+      const { error: serviceUpdateError } = await supabase
         .from('services')
         .update({
           checklist_data: checklistData,
@@ -142,9 +164,9 @@ export default function ServiceChecklistPage() {
         })
         .eq('id', serviceId);
 
-      if (error) throw error;
+      if (serviceUpdateError) throw serviceUpdateError;
 
-      toast.success('Checklist salvo com sucesso!');
+      toast.success('Inspeção finalizada e salva com sucesso!');
       router.push('/employee'); // Redirecionar após salvar
 
     } catch (error: any) {
@@ -202,18 +224,45 @@ export default function ServiceChecklistPage() {
       </header>
 
       <main className="max-w-4xl mx-auto space-y-8">
+        {/* Informações do Serviço */}
         <Card className="bg-[#1a1a1a] border-[#2a2a2a]">
           <CardHeader>
             <CardTitle className="text-white text-xl flex items-center gap-2">
               <ClipboardList className="w-5 h-5 text-blue-500" />
-              Serviço: {serviceId.substring(0, 8)}...
+              Inspeção em Andamento
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-400">Preencha o status de cada item inspecionado.</p>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-gray-500" />
+                    <p className="text-gray-400">Cliente: <span className="text-white font-medium">{client?.name}</span></p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Car className="w-4 h-4 text-gray-500" />
+                    <p className="text-gray-400">Veículo: <span className="text-white font-medium">{vehicle?.model} ({vehicle?.plate})</span></p>
+                </div>
+            </div>
+            
+            <div className="space-y-2">
+                <Label htmlFor="km-current" className="text-gray-300 flex items-center gap-2">
+                    <Gauge className="w-4 h-4" />
+                    KM Atual
+                </Label>
+                <Input
+                    id="km-current"
+                    type="number"
+                    placeholder="Insira o KM atual"
+                    value={kmCurrent}
+                    onChange={(e) => setKmCurrent(e.target.value)}
+                    required
+                    className="bg-[#0a0a0a] border-[#2a2a2a] text-white"
+                />
+            </div>
           </CardContent>
         </Card>
 
+        {/* Seções do Checklist */}
         {sections.map((section) => {
           const sectionItems = items.filter(item => item.section_id === section.id);
           
