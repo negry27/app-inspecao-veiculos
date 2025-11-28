@@ -24,15 +24,20 @@ export async function generateAndUploadPDF(details: ServiceDetails): Promise<{ s
       const sectionItems = items
         .filter(item => item.section_id === section.id)
         .map(item => {
-          const value = service.checklist_data[section.id]?.[item.id] || 'Não Respondido';
+          // Acessa a resposta do checklist_data do serviço
+          const answer = service.checklist_data[section.id]?.[item.id];
+          let displayValue = 'Não Respondido';
           
-          // Formatação especial para datetime
-          let displayValue = value;
-          if (item.response_type === 'datetime' && value) {
-            try {
-              displayValue = format(new Date(value), 'dd/MM/yyyy HH:mm');
-            } catch (e) {
-              displayValue = value; // Fallback
+          if (answer) {
+            displayValue = answer;
+            
+            // Formatação especial para datetime
+            if (item.response_type === 'datetime') {
+              try {
+                displayValue = format(new Date(answer), 'dd/MM/yyyy HH:mm');
+              } catch (e) {
+                displayValue = answer; // Fallback
+              }
             }
           }
 
