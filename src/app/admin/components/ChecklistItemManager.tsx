@@ -38,7 +38,7 @@ export default function ChecklistItemManager({ sectionId, items, onUpdate }: Che
     setEditingItem(item);
     setFormData({
       title: item.title,
-      // Apenas carrega opções se o tipo for 'options'
+      // Inicializa options apenas se for do tipo 'options', caso contrário, é vazio.
       options: item.response_type === 'options' ? item.options.join(', ') : '',
       order: item.order,
       response_type: item.response_type as ResponseType,
@@ -148,7 +148,7 @@ export default function ChecklistItemManager({ sectionId, items, onUpdate }: Che
                 <Label htmlFor="response_type">Tipo de Resposta</Label>
                 <Select 
                   value={formData.response_type} 
-                  onValueChange={(value: ResponseType) => setFormData({ ...formData, response_type: value, options: '' })} // Limpa opções ao mudar o tipo
+                  onValueChange={(value: ResponseType) => setFormData({ ...formData, response_type: value, options: '' })} // Limpa options ao mudar o tipo
                 >
                   <SelectTrigger id="response_type" className="bg-[#0a0a0a] border-[#2a2a2a]">
                     <SelectValue placeholder="Selecione o tipo" />
