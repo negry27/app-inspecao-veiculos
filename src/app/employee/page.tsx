@@ -67,7 +67,10 @@ export default function EmployeePage() {
         <h2 className="text-xl font-semibold text-white mb-6">Ações Rápidas</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="bg-[#1a1a1a] border-[#2a2a2a] hover:border-blue-600 transition-colors cursor-pointer">
+          <Card 
+            className="bg-[#1a1a1a] border-[#2a2a2a] hover:border-blue-600 transition-colors cursor-pointer"
+            onClick={() => router.push('/employee/new-service')}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-lg font-medium text-white">
                 Iniciar Nova Inspeção
@@ -84,7 +87,10 @@ export default function EmployeePage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-[#1a1a1a] border-[#2a2a2a] hover:border-green-600 transition-colors cursor-pointer">
+          <Card 
+            className="bg-[#1a1a1a] border-[#2a2a2a] hover:border-green-600 transition-colors cursor-pointer"
+            onClick={() => router.push('/employee/history')}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-lg font-medium text-white">
                 Ver Histórico de Serviços
