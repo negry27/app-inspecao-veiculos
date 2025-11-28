@@ -14,8 +14,9 @@ interface ServiceRecord {
     id: string;
     created_at: string;
     pdf_url: string | null;
-    client: { name: string };
-    vehicle: { model: string, plate: string };
+    // Ajustado para refletir a estrutura de array retornada pelo Supabase para relacionamentos aninhados
+    client: { name: string }[]; 
+    vehicle: { model: string, plate: string }[];
 }
 
 export default function ServiceHistoryPage() {
@@ -95,32 +96,39 @@ export default function ServiceHistoryPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {services.map((service) => (
-                  <div key={service.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-[#0a0a0a] p-4 rounded-lg border border-[#2a2a2a]">
-                    <div className="space-y-1 mb-3 sm:mb-0">
-                      <p className="text-sm font-medium text-white flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-gray-500" />
-                        Serviço ID: <span className="text-blue-400 truncate max-w-[150px] sm:max-w-none">{service.id.substring(0, 8)}...</span>
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        Cliente: {service.client?.name || 'N/A'} | Veículo: {service.vehicle?.model || 'N/A'} ({service.vehicle?.plate || 'N/A'})
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Data: {format(new Date(service.created_at), 'dd/MM/yyyy HH:mm')}
-                      </p>
+                {services.map((service) => {
+                  // Acessando o primeiro elemento do array de relacionamento
+                  const clientName = service.client?.[0]?.name || 'N/A';
+                  const vehicleModel = service.vehicle?.[0]?.model || 'N/A';
+                  const vehiclePlate = service.vehicle?.[0]?.plate || 'N/A';
+
+                  return (
+                    <div key={service.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-[#0a0a0a] p-4 rounded-lg border border-[#2a2a2a]">
+                      <div className="space-y-1 mb-3 sm:mb-0">
+                        <p className="text-sm font-medium text-white flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-gray-500" />
+                          Serviço ID: <span className="text-blue-400 truncate max-w-[150px] sm:max-w-none">{service.id.substring(0, 8)}...</span>
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          Cliente: {clientName} | Veículo: {vehicleModel} ({vehiclePlate})
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Data: {format(new Date(service.created_at), 'dd/MM/yyyy HH:mm')}
+                        </p>
+                      </div>
+                      
+                      <Button
+                        size="sm"
+                        onClick={() => handleDownloadPDF(service.pdf_url!)}
+                        disabled={!service.pdf_url}
+                        className={`h-8 text-xs ${service.pdf_url ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 opacity-50 cursor-not-allowed'}`}
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        {service.pdf_url ? 'Baixar PDF' : 'PDF Pendente'}
+                      </Button>
                     </div>
-                    
-                    <Button
-                      size="sm"
-                      onClick={() => handleDownloadPDF(service.pdf_url!)}
-                      disabled={!service.pdf_url}
-                      className={`h-8 text-xs ${service.pdf_url ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 opacity-50 cursor-not-allowed'}`}
-                    >
-                      <Download className="w-3 h-3 mr-1" />
-                      {service.pdf_url ? 'Baixar PDF' : 'PDF Pendente'}
-                    </Button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
