@@ -9,9 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Download, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Download, Loader2, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateAndUploadPDF } from '@/lib/pdf-utils';
+import { useRouter } from 'next/navigation';
 
 // Tipo auxiliar para o serviço com dados de relacionamento
 interface ServiceWithDetails extends Service {
@@ -21,6 +22,7 @@ interface ServiceWithDetails extends Service {
 }
 
 export default function ServicesTab() {
+  const router = useRouter();
   const [services, setServices] = useState<ServiceWithDetails[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -165,6 +167,10 @@ export default function ServicesTab() {
       setPdfLoadingId(null);
     }
   };
+  
+  const handleEdit = (serviceId: string) => {
+    router.push(`/admin/service/${serviceId}/checklist`);
+  };
 
   if (loading) {
     return (
@@ -258,6 +264,15 @@ export default function ServicesTab() {
               <CardTitle className="text-white flex items-center justify-between">
                 <span>Serviço #{service.id.substring(0, 8)}...</span>
                 <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleEdit(service.id)}
+                    className="bg-blue-500/10 border-blue-500/20 text-blue-500 hover:bg-blue-500/20"
+                  >
+                    <Edit className="w-3 h-3 mr-1" />
+                    Editar
+                  </Button>
                   <Button
                     size="sm"
                     variant="outline"
