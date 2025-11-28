@@ -1,3 +1,5 @@
+'use client';
+
 import { supabase } from './supabase';
 import bcrypt from 'bcryptjs';
 
@@ -104,8 +106,8 @@ export function getCurrentUser() {
 export async function changePassword(userId: string, newPassword: string) {
   try {
     // Validar senha
-    if (newPassword.length < 8) {
-      return { success: false, error: 'A senha deve ter no mínimo 8 caracteres' };
+    if (newPassword.length < 6) {
+      return { success: false, error: 'A senha deve ter no mínimo 6 caracteres' };
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -175,8 +177,8 @@ export async function createUser(
       return { success: false, error: 'Todos os campos são obrigatórios' };
     }
 
-    if (password.length < 8) {
-      return { success: false, error: 'A senha deve ter no mínimo 8 caracteres' };
+    if (password.length < 6) {
+      return { success: false, error: 'A senha deve ter no mínimo 6 caracteres' };
     }
 
     // Verificar se já existe usuário com este email ou username
@@ -280,8 +282,8 @@ export async function resetUserPassword(userId: string, newTemporaryPassword: st
       return { success: false, error: 'Apenas administradores podem resetar senhas' };
     }
 
-    if (newTemporaryPassword.length < 8) {
-      return { success: false, error: 'A senha deve ter no mínimo 8 caracteres' };
+    if (newTemporaryPassword.length < 6) {
+      return { success: false, error: 'A senha deve ter no mínimo 6 caracteres' };
     }
 
     const hashedPassword = await bcrypt.hash(newTemporaryPassword, 10);
