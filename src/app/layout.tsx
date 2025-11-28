@@ -32,9 +32,6 @@ export default function RootLayout({
         <Script 
           src="/lasy-bridge.js" 
           strategy="afterInteractive"
-          onLoad={() => {
-            console.log('Lasy bridge script loaded');
-          }}
         />
       </head>
       <body
