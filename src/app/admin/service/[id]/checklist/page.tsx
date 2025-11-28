@@ -186,14 +186,22 @@ export default function AdminServiceChecklistPage() {
         return;
     }
 
+    // --- START Validation and Data Collection ---
     let kmItemAnswer: string | undefined;
     let allOptionsAnswered = true;
+    let totalItems = 0;
+    let answeredItems = 0;
 
     sections.forEach(section => {
       const sectionItems = items.filter(item => item.section_id === section.id);
       sectionItems.forEach(item => {
+        totalItems++;
         const answer = checklistData[section.id]?.[item.id];
         
+        if (answer) {
+            answeredItems++;
+        }
+
         const itemTitleLower = item.title.toLowerCase();
 
         // 1. Capturar KM Atual
@@ -201,12 +209,22 @@ export default function AdminServiceChecklistPage() {
             kmItemAnswer = answer;
         }
 
-        // 2. Validar se todas as opções foram respondidas
+        // 2. Validar se todas as opções foram respondidas (apenas para tipo 'options')
         if (item.response_type === 'options' && !answer) {
           allOptionsAnswered = false;
         }
       });
     });
+    
+    if (totalItems === 0) {
+        toast.error('O checklist está vazio. Por favor, configure os itens.');
+        return;
+    }
+    
+    if (answeredItems === 0) {
+        toast.error('Nenhum item do checklist foi respondido.');
+        // Admin pode prosseguir, mas é bom avisar
+    }
     
     // Validação do KM (se houver um campo de KM no checklist)
     if (kmItemAnswer && (isNaN(Number(kmItemAnswer)) || Number(kmItemAnswer) <= 0)) {
@@ -217,21 +235,25 @@ export default function AdminServiceChecklistPage() {
     if (!allOptionsAnswered) {
       toast.warning(`Alguns itens de múltipla escolha não foram respondidos.`);
     }
+    // --- END Validation and Data Collection ---
 
     setSubmitting(true);
+    console.log('Iniciando submissão do checklist (Admin)...');
 
     try {
       // 1. Atualizar o KM atual do veículo APENAS se o valor foi preenchido no checklist
       if (kmItemAnswer && service.vehicle_id) {
+        console.log(`Atualizando KM do veículo ${service.vehicle_id} para: ${kmItemAnswer}`);
         const { error: vehicleUpdateError } = await supabase
           .from('vehicles')
           .update({ km_current: Number(kmItemAnswer), updated_at: new Date().toISOString() })
           .eq('id', service.vehicle_id);
 
-        if (vehicleUpdateError) throw vehicleUpdateError;
+        if (vehicleUpdateError) throw new Error(`Erro ao atualizar KM do veículo: ${vehicleUpdateError.message}`);
         
         // Atualiza o objeto vehicle localmente para o PDF
         vehicle.km_current = Number(kmItemAnswer);
+        console.log('KM do veículo atualizado com sucesso.');
       }
 
       // 2. Atualizar o serviço com checklist e observações
@@ -243,6 +265,7 @@ export default function AdminServiceChecklistPage() {
           pdf_url: null, 
       };
       
+      console.log('Atualizando registro de serviço...');
       const { data: updatedService, error: serviceUpdateError } = await supabase
         .from('services')
         .update(updatedServiceData)
@@ -250,12 +273,13 @@ export default function AdminServiceChecklistPage() {
         .select()
         .single();
 
-      if (serviceUpdateError) throw serviceUpdateError;
+      if (serviceUpdateError) throw new Error(`Erro ao atualizar serviço: ${serviceUpdateError.message}`);
       
       // 3. Gerar e fazer upload do PDF
       // Usamos o funcionário original do serviço para o relatório, não o admin que está editando
       const originalEmployee = service.employee; 
       
+      console.log('Iniciando regeneração e upload do PDF...');
       const pdfResult = await generateAndUploadPDF({
           service: { ...service, ...updatedServiceData, pdf_url: updatedService.pdf_url },
           client,
@@ -266,37 +290,30 @@ export default function AdminServiceChecklistPage() {
       });
       
       if (!pdfResult.success) {
+          console.error('Falha na geração do PDF:', pdfResult.error);
           toast.error(`Checklist salvo, mas falha ao gerar PDF: ${pdfResult.error}`);
       } else {
+          console.log('PDF regenerado e URL salva:', pdfResult.pdfUrl);
           toast.success('Inspeção atualizada, salva e PDF regenerado com sucesso!');
       }
 
       router.push('/admin'); // Redirecionar para o painel do admin
 
     } catch (error: any) {
-      console.error('Erro ao salvar checklist:', error);
+      console.error('Erro fatal ao salvar checklist (Admin):', error);
       
       let errorMessage = 'Erro desconhecido ao salvar checklist.';
       
-      if (error && typeof error === 'object') {
-        if (error.message) {
-          errorMessage = error.message;
-        } else if (error.details) {
-          errorMessage = error.details;
-        } else {
-          try {
-            errorMessage = JSON.stringify(error);
-          } catch {
-            errorMessage = String(error);
-          }
-        }
-      } else if (error) {
-        errorMessage = String(error);
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (error && typeof error === 'object' && error.message) {
+        errorMessage = error.message;
       }
       
-      toast.error(errorMessage);
+      toast.error(`Erro ao finalizar: ${errorMessage}`);
     } finally {
       setSubmitting(false);
+      console.log('Submissão finalizada (Admin).');
     }
   };
 
@@ -393,12 +410,8 @@ export default function AdminServiceChecklistPage() {
                   const currentAnswer = checklistData[section.id]?.[item.id] || '';
                   const itemTitleLower = item.title.toLowerCase();
                   
-                  // Determinar se o campo deve ser desabilitado (Admin pode editar tudo, mas mantemos a lógica de autofill para visualização)
-                  const isAutofillField = item.response_type === 'autofill';
+                  // Admin pode editar todos os campos
                   const isKmField = itemTitleLower.includes('km atual') || itemTitleLower.includes('quilometragem');
-                  
-                  // Admin pode editar todos os campos, incluindo autofill, exceto se for um campo de texto puro que foi preenchido automaticamente
-                  // Vamos permitir a edição de todos os campos para o Admin.
                   const isDisabled = false; 
 
                   return (

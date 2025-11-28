@@ -261,9 +261,9 @@ export default function ServicesTab() {
         {services.map((service) => (
           <Card key={service.id} className="bg-[#1a1a1a] border-[#2a2a2a]">
             <CardHeader>
-              <CardTitle className="text-white flex items-center justify-between">
+              <CardTitle className="text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <span>Serviço #{service.id.substring(0, 8)}...</span>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     size="sm"
                     variant="outline"

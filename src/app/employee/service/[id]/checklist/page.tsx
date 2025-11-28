@@ -178,14 +178,22 @@ export default function ServiceChecklistPage() {
         return;
     }
 
+    // --- START Validation and Data Collection ---
     let kmItemAnswer: string | undefined;
     let allOptionsAnswered = true;
+    let totalItems = 0;
+    let answeredItems = 0;
 
     sections.forEach(section => {
       const sectionItems = items.filter(item => item.section_id === section.id);
       sectionItems.forEach(item => {
+        totalItems++;
         const answer = checklistData[section.id]?.[item.id];
         
+        if (answer) {
+            answeredItems++;
+        }
+
         const itemTitleLower = item.title.toLowerCase();
 
         // 1. Capturar KM Atual
@@ -193,12 +201,22 @@ export default function ServiceChecklistPage() {
             kmItemAnswer = answer;
         }
 
-        // 2. Validar se todas as opções foram respondidas
+        // 2. Validar se todas as opções foram respondidas (apenas para tipo 'options')
         if (item.response_type === 'options' && !answer) {
           allOptionsAnswered = false;
         }
       });
     });
+    
+    if (totalItems === 0) {
+        toast.error('O checklist está vazio. Por favor, configure os itens.');
+        return;
+    }
+    
+    if (answeredItems === 0) {
+        toast.error('Nenhum item do checklist foi respondido.');
+        return;
+    }
     
     // Validação do KM (se houver um campo de KM no checklist)
     if (kmItemAnswer && (isNaN(Number(kmItemAnswer)) || Number(kmItemAnswer) <= 0)) {
@@ -209,21 +227,25 @@ export default function ServiceChecklistPage() {
     if (!allOptionsAnswered) {
       toast.warning(`Alguns itens de múltipla escolha não foram respondidos.`);
     }
+    // --- END Validation and Data Collection ---
 
     setSubmitting(true);
+    console.log('Iniciando submissão do checklist...');
 
     try {
       // 1. Atualizar o KM atual do veículo APENAS se o valor foi preenchido no checklist
       if (kmItemAnswer && service.vehicle_id) {
+        console.log(`Atualizando KM do veículo ${service.vehicle_id} para: ${kmItemAnswer}`);
         const { error: vehicleUpdateError } = await supabase
           .from('vehicles')
           .update({ km_current: Number(kmItemAnswer), updated_at: new Date().toISOString() })
           .eq('id', service.vehicle_id);
 
-        if (vehicleUpdateError) throw vehicleUpdateError;
+        if (vehicleUpdateError) throw new Error(`Erro ao atualizar KM do veículo: ${vehicleUpdateError.message}`);
         
         // Atualiza o objeto vehicle localmente para o PDF
         vehicle.km_current = Number(kmItemAnswer);
+        console.log('KM do veículo atualizado com sucesso.');
       }
 
       // 2. Atualizar o serviço com checklist e observações
@@ -233,6 +255,7 @@ export default function ServiceChecklistPage() {
           updated_at: new Date().toISOString(),
       };
       
+      console.log('Atualizando registro de serviço...');
       const { data: updatedService, error: serviceUpdateError } = await supabase
         .from('services')
         .update(updatedServiceData)
@@ -240,9 +263,10 @@ export default function ServiceChecklistPage() {
         .select()
         .single();
 
-      if (serviceUpdateError) throw serviceUpdateError;
+      if (serviceUpdateError) throw new Error(`Erro ao atualizar serviço: ${serviceUpdateError.message}`);
       
       // 3. Gerar e fazer upload do PDF
+      console.log('Iniciando geração e upload do PDF...');
       const pdfResult = await generateAndUploadPDF({
           service: { ...service, ...updatedServiceData, pdf_url: updatedService.pdf_url },
           client,
@@ -253,40 +277,30 @@ export default function ServiceChecklistPage() {
       });
       
       if (!pdfResult.success) {
+          console.error('Falha na geração do PDF:', pdfResult.error);
           toast.error(`Checklist salvo, mas falha ao gerar PDF: ${pdfResult.error}`);
       } else {
+          console.log('PDF gerado e URL salva:', pdfResult.pdfUrl);
           toast.success('Inspeção finalizada, salva e PDF gerado com sucesso!');
       }
 
       router.push('/employee/history'); // Redirecionar para o histórico
 
     } catch (error: any) {
-      console.error('Erro ao salvar checklist:', error);
+      console.error('Erro fatal ao salvar checklist:', error);
       
-      // Lógica robusta para extrair a mensagem de erro
       let errorMessage = 'Erro desconhecido ao salvar checklist.';
       
-      if (error && typeof error === 'object') {
-        if (error.message) {
-          errorMessage = error.message;
-        } else if (error.details) {
-          // Supabase errors sometimes use 'details'
-          errorMessage = error.details;
-        } else {
-          // Tenta serializar o objeto para obter mais detalhes
-          try {
-            errorMessage = JSON.stringify(error);
-          } catch {
-            errorMessage = String(error);
-          }
-        }
-      } else if (error) {
-        errorMessage = String(error);
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (error && typeof error === 'object' && error.message) {
+        errorMessage = error.message;
       }
       
-      toast.error(errorMessage);
+      toast.error(`Erro ao finalizar: ${errorMessage}`);
     } finally {
       setSubmitting(false);
+      console.log('Submissão finalizada.');
     }
   };
 
