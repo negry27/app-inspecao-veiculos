@@ -12,6 +12,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Please set these variables in your .env.local file');
 }
 
+// Validate URL format
+if (supabaseUrl && !supabaseUrl.startsWith('https://')) {
+  console.error('❌ Invalid Supabase URL format:');
+  console.error(`  - URL must start with "https://", got: ${supabaseUrl}`);
+  console.error('  - Example: https://hbomzwcmalfmfbqqlyus.supabase.co');
+}
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Types
