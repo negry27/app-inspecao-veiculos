@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { supabase, Service, ChecklistSection, ChecklistItem, Client, Vehicle } from '@/lib/supabase';
 import { getCurrentUser } from '@/lib/auth';
 import { toast } from 'sonner';
+import { generateAndUploadPDF } from '@/lib/pdf-utils'; // Importando a nova função
 
 interface ChecklistData {
   [sectionId: string]: {
@@ -39,6 +40,7 @@ export default function ServiceChecklistPage() {
   const [service, setService] = useState<Service | null>(null);
   const [client, setClient] = useState<Client | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [employee, setEmployee] = useState<any>(null); // Para armazenar dados do funcionário
   const [sections, setSections] = useState<ChecklistSection[]>([]);
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [checklistData, setChecklistData] = useState<ChecklistData>({});
@@ -53,6 +55,7 @@ export default function ServiceChecklistPage() {
       router.push('/login');
       return;
     }
+    setEmployee(user);
     if (serviceId) {
       loadServiceData();
     }
@@ -173,6 +176,11 @@ export default function ServiceChecklistPage() {
   };
 
   const handleSubmitChecklist = async () => {
+    if (!service || !client || !vehicle || !employee) {
+        toast.error('Dados do serviço incompletos. Recarregue a página.');
+        return;
+    }
+
     let kmItemAnswer: string | undefined;
     let allOptionsAnswered = true;
 
@@ -209,29 +217,51 @@ export default function ServiceChecklistPage() {
 
     try {
       // 1. Atualizar o KM atual do veículo APENAS se o valor foi preenchido no checklist
-      if (kmItemAnswer && service?.vehicle_id) {
+      if (kmItemAnswer && service.vehicle_id) {
         const { error: vehicleUpdateError } = await supabase
           .from('vehicles')
           .update({ km_current: Number(kmItemAnswer), updated_at: new Date().toISOString() })
           .eq('id', service.vehicle_id);
 
         if (vehicleUpdateError) throw vehicleUpdateError;
+        
+        // Atualiza o objeto vehicle localmente para o PDF
+        vehicle.km_current = Number(kmItemAnswer);
       }
 
-      // 2. Atualizar o serviço
-      const { error: serviceUpdateError } = await supabase
-        .from('services')
-        .update({
+      // 2. Atualizar o serviço com checklist e observações
+      const updatedServiceData = {
           checklist_data: checklistData,
           observations: observations,
           updated_at: new Date().toISOString(),
-        })
-        .eq('id', serviceId);
+      };
+      
+      const { data: updatedService, error: serviceUpdateError } = await supabase
+        .from('services')
+        .update(updatedServiceData)
+        .eq('id', serviceId)
+        .select()
+        .single();
 
       if (serviceUpdateError) throw serviceUpdateError;
+      
+      // 3. Gerar e fazer upload do PDF
+      const pdfResult = await generateAndUploadPDF({
+          service: { ...service, ...updatedServiceData, pdf_url: updatedService.pdf_url },
+          client,
+          vehicle,
+          employee,
+          sections,
+          items
+      });
+      
+      if (!pdfResult.success) {
+          toast.error(`Checklist salvo, mas falha ao gerar PDF: ${pdfResult.error}`);
+      } else {
+          toast.success('Inspeção finalizada, salva e PDF gerado com sucesso!');
+      }
 
-      toast.success('Inspeção finalizada e salva com sucesso!');
-      router.push('/employee'); // Redirecionar após salvar
+      router.push('/employee/history'); // Redirecionar para o histórico
 
     } catch (error: any) {
       console.error('Erro ao salvar checklist:', error);
@@ -438,7 +468,7 @@ export default function ServiceChecklistPage() {
             {submitting ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Salvando...
+                Finalizando e Gerando PDF...
               </>
             ) : (
               'Finalizar Inspeção e Salvar'
