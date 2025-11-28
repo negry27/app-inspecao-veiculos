@@ -38,7 +38,8 @@ export default function ChecklistItemManager({ sectionId, items, onUpdate }: Che
     setEditingItem(item);
     setFormData({
       title: item.title,
-      options: item.options.join(', '),
+      // Apenas carrega opções se o tipo for 'options'
+      options: item.response_type === 'options' ? item.options.join(', ') : '',
       order: item.order,
       response_type: item.response_type as ResponseType,
     });
@@ -49,17 +50,19 @@ export default function ChecklistItemManager({ sectionId, items, onUpdate }: Che
     e.preventDefault();
     setLoading(true);
 
-    const optionsArray = formData.options.split(',').map(opt => opt.trim()).filter(opt => opt.length > 0);
+    let finalOptions: string[] = [];
     
-    // Se o tipo for 'options', as opções são obrigatórias
-    if (formData.response_type === 'options' && optionsArray.length === 0) {
-        toast.error('Para o tipo "Opções", as opções não podem estar vazias.');
-        setLoading(false);
-        return;
+    if (formData.response_type === 'options') {
+        const optionsArray = formData.options.split(',').map(opt => opt.trim()).filter(opt => opt.length > 0);
+        
+        if (optionsArray.length === 0) {
+            toast.error('Para o tipo "Opções", as opções não podem estar vazias.');
+            setLoading(false);
+            return;
+        }
+        finalOptions = optionsArray;
     }
-    
-    // Se o tipo não for 'options' ou 'autofill', as opções devem ser vazias
-    const finalOptions = formData.response_type === 'options' ? optionsArray : [];
+    // Para outros tipos (text, datetime, autofill), finalOptions permanece []
 
     const itemData = {
       section_id: sectionId,
