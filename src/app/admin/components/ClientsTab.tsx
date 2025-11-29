@@ -12,7 +12,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, Edit, Trash2, Car as CarIcon, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatPlateDisplay } from '@/lib/utils'; // Removido formatPhoneNumber
-import { getCurrentUser } from '@/lib/auth'; // Importando getCurrentUser
 
 // Função de formatação de telefone (mantida aqui para o onChange)
 const formatPhoneNumberLocal = (value: string) => {
@@ -64,7 +63,6 @@ export default function ClientsTab() {
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<any>(null);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
-  const [currentUser, setCurrentUser] = useState<any>(null); // Novo estado para o usuário logado
   
   const [clientForm, setClientForm] = useState({ name: '', phone: '' });
   const [vehicleForm, setVehicleForm] = useState({
@@ -77,21 +75,11 @@ export default function ClientsTab() {
   });
 
   useEffect(() => {
-    const user = getCurrentUser();
-    if (user) {
-        setCurrentUser(user);
-        loadClients();
-    } else {
-        // Se não houver usuário, não carrega nada e exibe loading ou redireciona (embora esta tab só deva ser acessada por admin)
-        setLoading(false);
-    }
+    loadClients();
   }, []);
 
   const loadClients = async () => {
-    if (!currentUser) return;
-    
     try {
-      // A query agora só retornará clientes que pertencem ao usuário logado (devido ao RLS)
       const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
         .select('*')
@@ -99,7 +87,6 @@ export default function ClientsTab() {
 
       if (clientsError) throw clientsError;
 
-      // A query de veículos também só retornará veículos associados aos clientes visíveis
       const { data: vehiclesData, error: vehiclesError } = await supabase
         .from('vehicles')
         .select('*');
@@ -118,11 +105,6 @@ export default function ClientsTab() {
   const handleClientSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!currentUser) {
-        toast.error('Sessão expirada. Faça login novamente.');
-        return;
-    }
-
     // Garantir que o nome não está vazio
     if (!clientForm.name.trim()) {
         toast.error('O nome do cliente é obrigatório.');
@@ -136,20 +118,17 @@ export default function ClientsTab() {
       const clientData = {
         name: clientForm.name.trim(),
         phone: rawPhone || null, // Salva apenas números ou null
-        user_id: currentUser.id, // Adicionando o user_id
       };
 
       if (editingClient) {
-        // Ao atualizar, não precisamos enviar o user_id novamente, mas o RLS garante que só o dono pode atualizar
         const { error } = await supabase
           .from('clients')
-          .update({ name: clientData.name, phone: clientData.phone, updated_at: new Date().toISOString() })
+          .update({ ...clientData, updated_at: new Date().toISOString() })
           .eq('id', editingClient.id);
 
         if (error) throw error;
         toast.success('Cliente atualizado!');
       } else {
-        // Ao criar, o user_id é obrigatório para passar no RLS
         const { error } = await supabase
           .from('clients')
           .insert([clientData]);
@@ -209,7 +188,6 @@ export default function ClientsTab() {
     // Inserção no Supabase
     // ----------------------
     try {
-      // O RLS em vehicles agora garante que selectedClientId pertence ao currentUser
       const { error } = await supabase.from("vehicles").insert([
         {
           client_id: selectedClientId,
@@ -269,7 +247,6 @@ export default function ClientsTab() {
     if (!confirm('Tem certeza? Isso excluirá todos os veículos associados.')) return;
 
     try {
-      // O RLS em clients garante que só o dono pode deletar
       const { error } = await supabase.from('clients').delete().eq('id', id);
       if (error) throw error;
       toast.success('Cliente excluído!');
@@ -283,7 +260,6 @@ export default function ClientsTab() {
     if (!confirm('Tem certeza que deseja excluir este veículo?')) return;
 
     try {
-      // O RLS em vehicles garante que só o dono do cliente pode deletar
       const { error } = await supabase.from('vehicles').delete().eq('id', id);
       if (error) throw error;
       toast.success('Veículo excluído!');
