@@ -198,6 +198,7 @@ export default function ClientsTab() {
       return;
     }
 
+    // Combina Modelo e Ano
     const modelYearCombined = `${model}/${year}`;
 
     // ----------------------
@@ -208,7 +209,7 @@ export default function ClientsTab() {
         {
           client_id: selectedClientId,
           type: vehicleForm.type,
-          model_year: modelYearCombined,
+          model_year: modelYearCombined, // Usando o campo combinado
           plate: rawPlate,
           driver_name: vehicleForm.driver_name || null,
           observations: vehicleForm.observations || null,
