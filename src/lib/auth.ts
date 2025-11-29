@@ -9,15 +9,14 @@ import bcrypt from 'bcryptjs';
  */
 export async function signIn(identifier: string, password: string) {
   try {
-    // Normaliza o identificador para busca (Supabase é case-sensitive por padrão em 'eq')
+    // Normaliza o identificador para busca
     const normalizedIdentifier = identifier.trim();
     
-    // Buscar usuário pelo email ou username
-    // Usamos 'ilike' para username para ser mais flexível, mas 'eq' para email
+    // Buscar usuário pelo email ou username usando 'ilike' para busca case-insensitive
     const { data: users, error: searchError } = await supabase
       .from('users')
       .select('*')
-      .or(`email.eq.${normalizedIdentifier},username.eq.${normalizedIdentifier}`);
+      .or(`email.ilike.${normalizedIdentifier},username.ilike.${normalizedIdentifier}`);
 
     if (searchError) {
       console.error('Erro ao buscar usuário:', searchError);
@@ -191,7 +190,7 @@ export async function createUser(
     const { data: existingUsers } = await supabase
       .from('users')
       .select('username')
-      .or(`email.eq.${email},username.eq.${username}`);
+      .or(`email.ilike.${email},username.ilike.${username}`);
 
     if (existingUsers && existingUsers.length > 0) {
       return { success: false, error: 'Usuário já cadastrado' };
