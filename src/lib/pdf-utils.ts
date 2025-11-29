@@ -110,9 +110,10 @@ export async function generateAndUploadPDF(details: ServiceDetails): Promise<{ s
     const publicUrl = publicUrlData.publicUrl;
 
     // 5. Atualizar o registro do serviço no banco de dados
+    // Removendo a atualização explícita de updated_at para evitar erro de schema cache
     const { error: updateError } = await supabase
       .from('services')
-      .update({ pdf_url: publicUrl, updated_at: new Date().toISOString() })
+      .update({ pdf_url: publicUrl })
       .eq('id', service.id);
 
     if (updateError) throw updateError;

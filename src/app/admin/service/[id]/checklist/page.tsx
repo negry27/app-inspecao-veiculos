@@ -246,7 +246,7 @@ export default function AdminServiceChecklistPage() {
         console.log(`Atualizando KM do veículo ${service.vehicle_id} para: ${kmItemAnswer}`);
         const { error: vehicleUpdateError } = await supabase
           .from('vehicles')
-          .update({ km_current: Number(kmItemAnswer), updated_at: new Date().toISOString() })
+          .update({ km_current: Number(kmItemAnswer) })
           .eq('id', service.vehicle_id);
 
         if (vehicleUpdateError) throw new Error(`Erro ao atualizar KM do veículo: ${vehicleUpdateError.message}`);
@@ -260,7 +260,6 @@ export default function AdminServiceChecklistPage() {
       const updatedServiceData = {
           checklist_data: checklistData,
           observations: observations,
-          updated_at: new Date().toISOString(),
           // Forçar a regeneração do PDF limpando a URL existente
           pdf_url: null, 
       };
