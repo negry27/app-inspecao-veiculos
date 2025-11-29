@@ -121,23 +121,19 @@ export default function ServicesTab() {
     }
   };
 
-  const handleGeneratePDF = async (service: ServiceWithDetails) => {
-    // Acessa o primeiro elemento do array de relacionamento
-    const clientDetail = service.client?.[0];
+  const handleDownloadExistingPDF = async (service: ServiceWithDetails) => {
     const vehicleDetail = service.vehicle?.[0];
-    const employeeDetail = service.employee?.[0];
+    const url = service.pdf_url;
 
-    if (!clientDetail || !vehicleDetail || !employeeDetail) {
-        toast.error('Dados de cliente/veículo/funcionário incompletos para gerar PDF. Edite o serviço e preencha o checklist.');
+    if (!url) {
+        toast.error('PDF não disponível.');
         return;
     }
 
-    if (service.pdf_url) {
-      setPdfLoadingId(service.id);
-      try {
+    setPdfLoadingId(service.id);
+    try {
         // Extrai o caminho do arquivo do URL público
-        // Ex: https://hbomzwcmalfmfbqqlyus.supabase.co/storage/v1/object/public/pdf-reports/reports/uuid-timestamp.pdf
-        const urlParts = service.pdf_url.split('/public/pdf-reports/');
+        const urlParts = url.split('/public/pdf-reports/');
         if (urlParts.length < 2) {
             throw new Error('URL do PDF inválida.');
         }
@@ -151,26 +147,42 @@ export default function ServicesTab() {
         if (error) throw error;
 
         if (data) {
-          const url = window.URL.createObjectURL(data);
+          const blobUrl = window.URL.createObjectURL(data);
           const link = document.createElement('a');
-          link.href = url;
+          link.href = blobUrl;
           // Define o nome do arquivo para download
-          link.setAttribute('download', `${service.id.substring(0, 8)}-${vehicleDetail.plate}.pdf`);
+          link.setAttribute('download', `${service.id.substring(0, 8)}-${vehicleDetail?.plate || 'report'}.pdf`);
           document.body.appendChild(link);
           link.click();
           link.remove();
-          window.URL.revokeObjectURL(url);
+          window.URL.revokeObjectURL(blobUrl);
           toast.success('Download iniciado!');
         } else {
           throw new Error('Nenhum dado de arquivo retornado.');
         }
 
-      } catch (error) {
+    } catch (error) {
         console.error('Erro ao baixar PDF:', error);
         toast.error('Erro ao baixar PDF. Tente gerar novamente.');
-      } finally {
+    } finally {
         setPdfLoadingId(null);
-      }
+    }
+  };
+
+  const handleGeneratePDF = async (service: ServiceWithDetails) => {
+    // Acessa o primeiro elemento do array de relacionamento
+    const clientDetail = service.client?.[0];
+    const vehicleDetail = service.vehicle?.[0];
+    const employeeDetail = service.employee?.[0];
+
+    if (!clientDetail || !vehicleDetail || !employeeDetail) {
+        toast.error('Dados de cliente/veículo/funcionário incompletos para gerar PDF. Edite o serviço e preencha o checklist.');
+        return;
+    }
+
+    if (service.pdf_url) {
+      // Se o PDF já existe, apenas chama a função de download
+      await handleDownloadExistingPDF(service);
       return;
     }
     
@@ -208,11 +220,16 @@ export default function ServicesTab() {
       // 3. Recarregar dados para atualizar a URL do PDF na lista
       await loadData(); 
       
-      // 4. Tenta forçar o download do PDF recém-gerado (recursivo, mas seguro)
-      const updatedService = services.find(s => s.id === service.id) || service;
-      if (updatedService.pdf_url) {
-          // Chama a si mesma para executar a lógica de download
-          await handleGeneratePDF(updatedService);
+      // 4. Tenta forçar o download do PDF recém-gerado
+      // Busca o serviço atualizado para garantir que a URL do PDF esteja presente
+      const { data: updatedServiceData } = await supabase
+        .from('services')
+        .select(`*, client:client_id(name, phone), vehicle:vehicle_id(model, plate, type), employee:employee_id(username, cargo)`)
+        .eq('id', service.id)
+        .single();
+
+      if (updatedServiceData && updatedServiceData.pdf_url) {
+          await handleDownloadExistingPDF(updatedServiceData as ServiceWithDetails);
       }
 
     } catch (error) {
