@@ -1,22 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Get environment variables with fallbacks for development
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://hbomzwcmalfmfbqqlyus.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhib216d2NtYWxmbWZicXFseXVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyOTk0MjEsImV4cCI6MjA3OTg3NTQyMX0.ncYVXIHbfgSgZxPOseoz6S5fteoe0kQZFGaF6EUi1ak';
 
 // Validate required environment variables
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Missing Supabase environment variables:');
-  if (!supabaseUrl) console.error('  - NEXT_PUBLIC_SUPABASE_URL is required');
-  if (!supabaseAnonKey) console.error('  - NEXT_PUBLIC_SUPABASE_ANON_KEY is required');
-  console.error('Please set these variables in your .env.local file');
-}
-
-// Validate URL format
-if (supabaseUrl && !supabaseUrl.startsWith('https://')) {
-  console.error('❌ Invalid Supabase URL format:');
-  console.error(`  - URL must start with "https://", got: ${supabaseUrl}`);
-  console.error('  - Example: https://hbomzwcmalfmfbqqlyus.supabase.co');
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  console.warn('⚠️ Usando credenciais Supabase de fallback. Certifique-se de configurar NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY no .env.local.');
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -69,7 +59,7 @@ export interface ChecklistItem {
   title: string;
   options: string[];
   order: number;
-  response_type: 'options' | 'text' | 'datetime' | 'autofill'; // Novo tipo adicionado
+  response_type: 'options' | 'text' | 'datetime' | 'autofill';
   created_at: string;
 }
 
