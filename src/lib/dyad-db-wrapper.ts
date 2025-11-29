@@ -69,7 +69,14 @@ export class Dyad {
       });
 
     if (error) {
-      // Melhorando o log de erro
+      // Código de erro 23505 é a violação de restrição de unicidade (Unique constraint violation)
+      // Se o usuário já existe, ignoramos o erro e deixamos a função hasUserMaster lidar com isso.
+      if (error.code === '23505') {
+        if (this.verbose) console.warn('[Dyad Wrapper] Master user already exists (23505 error ignored).');
+        return;
+      }
+      
+      // Se for outro erro, lançamos
       const errorMessage = error.message || JSON.stringify(error);
       if (this.verbose) console.error('[Dyad Wrapper] Error creating master user:', errorMessage);
       throw new Error(errorMessage);
