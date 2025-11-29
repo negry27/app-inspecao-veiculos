@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, History, Loader2, Download, FileText } from 'lucide-react';
+import { ArrowLeft, History, Loader2, Download, FileText, User, Car } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/lib/supabase';
@@ -147,15 +147,22 @@ export default function ServiceHistoryPage() {
 
                   return (
                     <div key={service.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-[#0a0a0a] p-4 rounded-lg border border-[#2a2a2a]">
-                      <div className="space-y-1 mb-3 sm:mb-0">
+                      <div className="space-y-1 mb-3 sm:mb-0 flex-1">
                         <p className="text-sm font-medium text-white flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-gray-500" />
-                          Serviço ID: <span className="text-blue-400 truncate max-w-[150px] sm:max-w-none">{service.id.substring(0, 8)}...</span>
+                          <FileText className="w-4 h-4 text-blue-400" />
+                          Inspeção ID: <span className="text-blue-400 truncate max-w-[150px] sm:max-w-none">{service.id.substring(0, 8)}...</span>
                         </p>
-                        <p className="text-xs text-gray-400">
-                          Cliente: {clientName} | Veículo: {vehicleModel} ({vehiclePlate})
-                        </p>
-                        <p className="text-xs text-gray-500">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 text-xs">
+                            <div className="flex items-center gap-1 text-gray-400">
+                                <User className="w-3 h-3" />
+                                Cliente: <span className="text-white font-medium">{clientName}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-gray-400">
+                                <Car className="w-3 h-3" />
+                                Veículo: <span className="text-white font-medium">{vehicleModel} ({vehiclePlate})</span>
+                            </div>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
                           Data: {format(new Date(service.created_at), 'dd/MM/yyyy HH:mm')}
                         </p>
                       </div>

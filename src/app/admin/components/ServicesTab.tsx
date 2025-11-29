@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Download, Loader2, Edit } from 'lucide-react';
+import { Plus, Trash2, Download, Loader2, Edit, User as UserIcon, Car, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateAndUploadPDF } from '@/lib/pdf-utils';
 import { useRouter } from 'next/navigation';
@@ -351,9 +351,12 @@ export default function ServicesTab() {
 
           return (
             <Card key={service.id} className="bg-[#1a1a1a] border-[#2a2a2a]">
-              <CardHeader>
-                <CardTitle className="text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                  <span>Serviço #{service.id.substring(0, 8)}...</span>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-lg flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ClipboardList className="w-5 h-5 text-blue-500" />
+                    Serviço ID: <span className="text-blue-400 text-base font-normal">{service.id.substring(0, 8)}...</span>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     <Button
                       size="sm"
@@ -389,27 +392,35 @@ export default function ServicesTab() {
                   </div>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-400">Cliente</p>
-                    <p className="text-white">{clientDetail?.name || 'Não informado'}</p>
+              <CardContent className="space-y-3 pt-0">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm border-t border-[#2a2a2a] pt-3">
+                  <div className="flex items-center gap-2">
+                    <UserIcon className="w-4 h-4 text-gray-500" />
+                    <div>
+                      <p className="text-gray-400">Cliente</p>
+                      <p className="text-white font-medium">{clientDetail?.name || 'Não informado'}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-gray-400">Veículo</p>
-                    <p className="text-white">{vehicleDetail?.model || 'Não informado'} - {vehicleDetail?.plate || 'Não informado'}</p>
+                  <div className="flex items-center gap-2">
+                    <Car className="w-4 h-4 text-gray-500" />
+                    <div>
+                      <p className="text-gray-400">Veículo</p>
+                      <p className="text-white font-medium">{vehicleDetail?.model || 'N/A'} ({vehicleDetail?.plate || 'N/A'})</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-gray-400">Funcionário</p>
-                    <p className="text-white">{employeeDetail?.username || 'Não informado'}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-400">Data</p>
-                    <p className="text-white">{new Date(service.created_at).toLocaleDateString('pt-BR')}</p>
+                  <div className="flex items-center gap-2">
+                    <UserIcon className="w-4 h-4 text-gray-500" />
+                    <div>
+                      <p className="text-gray-400">Funcionário</p>
+                      <p className="text-white font-medium">{employeeDetail?.username || 'Não informado'}</p>
+                    </div>
                   </div>
                 </div>
+                <div className="text-xs text-gray-500 border-t border-[#2a2a2a] pt-3 mt-3">
+                    Criado em: {new Date(service.created_at).toLocaleDateString('pt-BR')} às {new Date(service.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </div>
                 {service.observations && (
-                  <div>
+                  <div className="mt-3 pt-3 border-t border-[#2a2a2a]">
                     <p className="text-gray-400 text-sm mb-1">Observações</p>
                     <p className="text-white text-sm">{service.observations}</p>
                   </div>
