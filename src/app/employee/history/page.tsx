@@ -17,7 +17,7 @@ interface ServiceRecord {
     checklist_data: any; // Adicionado para buscar dados embutidos
     // Ajustado para refletir a estrutura de array retornada pelo Supabase para relacionamentos aninhados
     client: { name: string }[]; 
-    vehicle: { model: string, plate: string }[];
+    vehicle: { model_year: string, plate: string }[]; // CORRIGIDO: Usando model_year
 }
 
 export default function ServiceHistoryPage() {
@@ -42,7 +42,7 @@ export default function ServiceHistoryPage() {
     try {
       const { data, error } = await supabase
         .from('services')
-        .select('id, created_at, pdf_url, checklist_data, client:client_id(name), vehicle:vehicle_id(model, plate)')
+        .select('id, created_at, pdf_url, checklist_data, client:client_id(name), vehicle:vehicle_id(model_year, plate)')
         .eq('employee_id', employeeId)
         .order('created_at', { ascending: false });
 
@@ -146,7 +146,7 @@ export default function ServiceHistoryPage() {
                   
                   // Fallback para dados de relacionamento (para serviços antigos)
                   const clientName = embeddedClient?.name || service.client?.[0]?.name || 'N/A';
-                  const vehicleModel = embeddedVehicle?.model || service.vehicle?.[0]?.model || 'N/A';
+                  const vehicleModel = embeddedVehicle?.model_year || service.vehicle?.[0]?.model_year || 'N/A';
                   const vehiclePlate = embeddedVehicle?.plate || service.vehicle?.[0]?.plate || 'N/A';
                   
                   const pdfAvailable = !!service.pdf_url;
