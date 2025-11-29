@@ -9,15 +9,23 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { supabase, Service, ChecklistSection, ChecklistItem, Client, Vehicle } from '@/lib/supabase';
+import { supabase, Service, ChecklistSection, ChecklistItem, Client, Vehicle, User as DBUser } from '@/lib/supabase';
 import { getCurrentUser } from '@/lib/auth';
 import { toast } from 'sonner';
 import { generateAndUploadPDF } from '@/lib/pdf-utils'; // Importando a nova função
+import { format } from 'date-fns';
 
 interface ChecklistData {
   [sectionId: string]: {
     [itemId: string]: string; // value of the selected option or text input
   };
+}
+
+// Define a interface para incluir os dados de relacionamento
+interface ServiceWithDetails extends Service {
+  client: Client;
+  vehicle: Vehicle;
+  employee: DBUser; // Usando DBUser para tipagem correta
 }
 
 // Função auxiliar para formatar data/hora para input datetime-local
@@ -37,28 +45,28 @@ export default function ServiceChecklistPage() {
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [service, setService] = useState<Service | null>(null);
+  const [service, setService] = useState<ServiceWithDetails | null>(null);
   const [client, setClient] = useState<Client | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
-  const [employee, setEmployee] = useState<any>(null); // Para armazenar dados do funcionário
+  const [employeeDetails, setEmployeeDetails] = useState<DBUser | null>(null); // Detalhes completos do funcionário
   const [sections, setSections] = useState<ChecklistSection[]>([]);
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [checklistData, setChecklistData] = useState<ChecklistData>({});
   const [observations, setObservations] = useState('');
   
   useEffect(() => {
-    const user = getCurrentUser();
-    if (!user || user.role !== 'employee') {
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.role !== 'employee') {
       router.push('/login');
       return;
     }
-    setEmployee(user);
+    
     if (serviceId) {
-      loadServiceData();
+      loadServiceData(currentUser.id);
     }
   }, [router, serviceId]);
 
-  const loadServiceData = async () => {
+  const loadServiceData = async (currentUserId: string) => {
     try {
       // 1. Carregar Serviço e relacionamentos
       const { data: serviceData, error: serviceError } = await supabase
@@ -74,11 +82,19 @@ export default function ServiceChecklistPage() {
         return;
       }
       
-      const loadedService = serviceData as Service & { client: Client, vehicle: Vehicle, employee: any };
+      const loadedService = serviceData as ServiceWithDetails;
+      
+      // ⚠️ Segurança: Garantir que o funcionário logado é o dono do serviço
+      if (loadedService.employee_id !== currentUserId) {
+        toast.error('Acesso negado. Este serviço não pertence a você.');
+        router.push('/employee');
+        return;
+      }
       
       setService(loadedService);
       setClient(loadedService.client);
       setVehicle(loadedService.vehicle);
+      setEmployeeDetails(loadedService.employee); // Usar detalhes completos do funcionário
       setObservations(loadedService.observations || '');
       
       const initialChecklistData = loadedService.checklist_data || {};
@@ -173,7 +189,7 @@ export default function ServiceChecklistPage() {
   };
 
   const handleSubmitChecklist = async () => {
-    if (!service || !client || !vehicle || !employee) {
+    if (!service || !client || !vehicle || !employeeDetails) {
         toast.error('Dados do serviço incompletos. Recarregue a página.');
         return;
     }
@@ -270,7 +286,7 @@ export default function ServiceChecklistPage() {
           service: { ...service, ...updatedServiceData, pdf_url: updatedService.pdf_url },
           client,
           vehicle,
-          employee,
+          employee: employeeDetails, // Usando employeeDetails completo
           sections,
           items
       });
