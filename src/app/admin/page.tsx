@@ -70,7 +70,7 @@ export default function AdminPage() {
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="employees" className="space-y-6">
           <TabsList className="grid w-full grid-cols-5 bg-[#1a1a1a] border border-[#2a2a2a]">
-            <TabsTrigger value="employees" className="data-[state=active]:bg-blue-600">
+            <TabsTrigger value="employees" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
               <Users className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Funcionários</span>
             </TabsTrigger>
