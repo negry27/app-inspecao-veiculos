@@ -81,7 +81,7 @@ export default function NewServicePage() {
         employee_id: currentUser.id,
         client_id: selectedClientId,
         vehicle_id: selectedVehicleId,
-        // Salvar detalhes completos do cliente e veículo no checklist_data
+        // Salvar detalhes completos do cliente, veículo e funcionário no checklist_data
         checklist_data: {
           __meta: {
             client_details: {
@@ -94,6 +94,10 @@ export default function NewServicePage() {
               plate: selectedVehicle.plate,
               km_current: selectedVehicle.km_current,
               observations: selectedVehicle.observations,
+            },
+            employee_details: { // Adicionando detalhes do funcionário
+              username: currentUser.username,
+              cargo: currentUser.cargo,
             }
           }
         }, 

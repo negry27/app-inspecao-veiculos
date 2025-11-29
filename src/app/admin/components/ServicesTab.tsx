@@ -51,7 +51,7 @@ export default function ServicesTab() {
         .select(`
           *,
           client:client_id(name, phone),
-          vehicle:vehicle_id(model, plate, type),
+          vehicle:vehicle_id(model, plate, type, km_current, observations),
           employee:employee_id(username, cargo)
         `)
         .order('created_at', { ascending: false });
@@ -178,11 +178,13 @@ export default function ServicesTab() {
     // Prioriza dados embutidos (para novos serviços)
     const embeddedClient = service.checklist_data?.__meta?.client_details;
     const embeddedVehicle = service.checklist_data?.__meta?.vehicle_details;
-
+    const embeddedEmployee = service.checklist_data?.__meta?.employee_details;
+    
     const finalClient = embeddedClient || clientDetail;
     const finalVehicle = embeddedVehicle || vehicleDetail;
+    const finalEmployee = embeddedEmployee || employeeDetail;
 
-    if (!finalClient || !finalVehicle || !employeeDetail) {
+    if (!finalClient || !finalVehicle || !finalEmployee) {
         toast.error('Dados de cliente/veículo/funcionário incompletos para gerar PDF. Edite o serviço e preencha o checklist.');
         return;
     }
@@ -226,12 +228,25 @@ export default function ServicesTab() {
         created_at: '', // Placeholder
         updated_at: '', // Placeholder
       };
+      
+      const employeeForPdf: User = {
+        id: service.employee_id,
+        username: finalEmployee.username,
+        cargo: finalEmployee.cargo,
+        email: '', // Placeholder
+        role: 'employee', // Placeholder
+        status: 'active', // Placeholder
+        is_temporary_password: false, // Placeholder
+        created_at: '', // Placeholder
+        updated_at: '', // Placeholder
+      };
+
 
       const details = {
         service: service,
         client: clientForPdf,
         vehicle: vehicleForPdf,
-        employee: employeeDetail,
+        employee: employeeForPdf,
         sections: sectionsRes.data as ChecklistSection[],
         items: itemsRes.data as ChecklistItem[],
       };
@@ -252,7 +267,7 @@ export default function ServicesTab() {
       // Busca o serviço atualizado para garantir que a URL do PDF esteja presente
       const { data: updatedServiceData } = await supabase
         .from('services')
-        .select(`*, client:client_id(name, phone), vehicle:vehicle_id(model, plate, type), employee:employee_id(username, cargo)`)
+        .select(`*, client:client_id(name, phone), vehicle:vehicle_id(model, plate, type, km_current, observations), employee:employee_id(username, cargo)`)
         .eq('id', service.id)
         .single();
 
@@ -374,11 +389,12 @@ export default function ServicesTab() {
           // Prioriza dados embutidos (para novos serviços)
           const embeddedClient = service.checklist_data?.__meta?.client_details;
           const embeddedVehicle = service.checklist_data?.__meta?.vehicle_details;
+          const embeddedEmployee = service.checklist_data?.__meta?.employee_details;
           
           // Fallback para dados de relacionamento (para serviços antigos)
           const clientDetail = embeddedClient || service.client?.[0];
           const vehicleDetail = embeddedVehicle || service.vehicle?.[0];
-          const employeeDetail = service.employee?.[0];
+          const employeeDetail = embeddedEmployee || service.employee?.[0];
           const pdfAvailable = !!service.pdf_url;
 
           return (
