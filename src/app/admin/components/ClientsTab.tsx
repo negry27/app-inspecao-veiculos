@@ -55,16 +55,14 @@ const formatPhoneNumber = (value: string) => {
 
 // Função de formatação de placa (XXX-XXXX)
 const formatPlate = (value: string) => {
-  const numericValue = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  // Remove caracteres não alfanuméricos e converte para maiúsculas
+  const cleanValue = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
   
-  if (numericValue.length > 7) {
-    return numericValue.substring(0, 7).replace(
-      /^([a-zA-Z0-9]{3})([a-zA-Z0-9]{4})$/,
-      '$1-$2'
-    );
-  }
+  // Limita a 7 caracteres (3 letras/números + 4 números/letras)
+  const numericValue = cleanValue.substring(0, 7);
   
   if (numericValue.length > 3) {
+    // Aplica o hífen após o terceiro caractere
     return numericValue.replace(
       /^([a-zA-Z0-9]{3})([a-zA-Z0-9]*)$/,
       '$1-$2'
@@ -180,16 +178,15 @@ export default function ClientsTab() {
     e.preventDefault();
     
     const modelYearCombined = `${vehicleForm.model.trim()}/${vehicleForm.year.trim()}`;
+    const rawPlate = vehicleForm.plate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
-    if (!vehicleForm.model || !vehicleForm.year || !vehicleForm.plate) {
+    if (!vehicleForm.model || !vehicleForm.year || !rawPlate) {
         toast.error('Modelo, Ano e Placa são obrigatórios.');
         return;
     }
     
-    // Remove a máscara da placa antes de salvar
-    const rawPlate = vehicleForm.plate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
     if (rawPlate.length < 7) {
-        toast.error('A placa deve ter 7 caracteres (ex: ABC-1234).');
+        toast.error('A placa deve ter 7 caracteres (ex: ABC1234).');
         return;
     }
 
@@ -431,7 +428,7 @@ export default function ClientsTab() {
               <Label>Placa (XXX-XXXX)</Label>
               <Input
                 value={vehicleForm.plate}
-                onChange={handlePlateChange}
+                onChange={handlePlateChange} // Usando a função de formatação aqui
                 required
                 maxLength={8} // 3 letras + hífen + 4 números/letras
                 placeholder="ABC-1234"
