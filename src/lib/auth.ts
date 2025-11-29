@@ -134,6 +134,7 @@ export async function changePassword(userId: string, newPassword: string) {
     if (currentUser && typeof window !== 'undefined') {
       currentUser.is_temporary_password = false;
       localStorage.setItem('user', JSON.stringify(currentUser));
+      console.log('✅ Sessão local atualizada após troca de senha:', currentUser);
     }
     
     return { success: true };

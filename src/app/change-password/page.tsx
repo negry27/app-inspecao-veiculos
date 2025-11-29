@@ -22,6 +22,7 @@ export default function ChangePasswordPage() {
     if (!currentUser) {
       router.push('/login');
     } else if (!currentUser.is_temporary_password) {
+      // Redirecionamento se a senha JÁ foi alterada
       router.push(currentUser.role === 'admin' ? '/admin' : '/employee');
     } else {
       setUser(currentUser);
@@ -52,7 +53,7 @@ export default function ChangePasswordPage() {
       const updatedUser = { ...user, is_temporary_password: false };
       localStorage.setItem('user', JSON.stringify(updatedUser));
       
-      // Redirecionar
+      // Redirecionar baseado na role
       router.push(user.role === 'admin' ? '/admin' : '/employee');
     } else {
       toast.error(result.error || 'Erro ao alterar senha');
