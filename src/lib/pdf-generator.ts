@@ -14,7 +14,7 @@ interface PDFData {
     type: string;
     model: string;
     plate: string;
-    km: number;
+    // km: number; // Removed as it's no longer collected/used in this context
   };
   checklist: {
     section: string;
@@ -77,9 +77,7 @@ export async function generateServicePDF(data: PDFData): Promise<Blob> {
   doc.text(`Modelo: ${data.vehicle.model}`, 20, yPosition);
   yPosition += 5;
   doc.text(`Placa: ${data.vehicle.plate}`, 20, yPosition);
-  yPosition += 5;
-  doc.text(`KM: ${data.vehicle.km}`, 20, yPosition);
-  yPosition += 15;
+  yPosition += 15; // Removed KM line
 
   // Checklist
   doc.setFontSize(14);
