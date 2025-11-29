@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, signOut } from '@/lib/auth';
 import { initializeDatabase, InitResult } from '@/lib/init-db';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -14,6 +14,9 @@ export default function Home() {
 
   useEffect(() => {
     const initialize = async () => {
+      // 1. Forçar logout para limpar qualquer sessão antiga
+      signOut();
+      
       // Define a timeout promise (5 seconds) to prevent hanging indefinitely
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Timeout na inicialização do DB')), 5000)
@@ -30,7 +33,7 @@ export default function Home() {
           setInitMessage('Sistema pronto!');
         }
 
-        // Verificar usuário atual
+        // Verificar usuário atual (deve ser nulo após signOut)
         const user = getCurrentUser();
         
         if (!user) {
