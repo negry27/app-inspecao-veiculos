@@ -74,19 +74,19 @@ export default function AdminPage() {
               <Users className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Funcionários</span>
             </TabsTrigger>
-            <TabsTrigger value="clients" className="data-[state=active]:bg-blue-600">
+            <TabsTrigger value="clients" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
               <Car className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Clientes</span>
             </TabsTrigger>
-            <TabsTrigger value="checklist" className="data-[state=active]:bg-blue-600">
+            <TabsTrigger value="checklist" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
               <ClipboardList className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Checklist</span>
             </TabsTrigger>
-            <TabsTrigger value="services" className="data-[state=active]:bg-blue-600">
+            <TabsTrigger value="services" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
               <FileText className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Serviços</span>
             </TabsTrigger>
-            <TabsTrigger value="cargos" className="data-[state=active]:bg-blue-600">
+            <TabsTrigger value="cargos" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
               <Briefcase className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Cargos</span>
             </TabsTrigger>
