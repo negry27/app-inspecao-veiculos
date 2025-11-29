@@ -51,6 +51,9 @@ export default function LoginPage() {
 
     try {
       const result = await signIn(username, password);
+      
+      // 💡 LOG DE DEBUG: Verifique este log no console (F12)
+      console.log('Login Result:', result);
 
       if (result.success && result.user) {
         toast.success('Login realizado com sucesso!');
