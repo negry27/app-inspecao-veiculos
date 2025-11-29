@@ -12,6 +12,48 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, Edit, Trash2, Car as CarIcon, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+// Função de formatação de telefone
+const formatPhoneNumber = (value: string) => {
+  // 1. Remove todos os caracteres não numéricos
+  const numericValue = value.replace(/\D/g, '');
+
+  // 2. Aplica a máscara (xx) x xxxx-xxxx (11 dígitos)
+  if (numericValue.length > 11) {
+    return numericValue.substring(0, 11).replace(
+      /^(\d{2})(\d{1})(\d{4})(\d{4})$/,
+      '($1) $2 $3-$4'
+    );
+  }
+  
+  // Aplica a máscara (xx) x xxxx-xxxx (11 dígitos)
+  if (numericValue.length === 11) {
+    return numericValue.replace(
+      /^(\d{2})(\d{1})(\d{4})(\d{4})$/,
+      '($1) $2 $3-$4'
+    );
+  }
+  
+  // Aplica a máscara (xx) xxxx-xxxx (10 dígitos)
+  if (numericValue.length === 10) {
+    return numericValue.replace(
+      /^(\d{2})(\d{4})(\d{4})$/,
+      '($1) $2-$3'
+    );
+  }
+  
+  // Aplica a máscara parcial
+  if (numericValue.length > 2) {
+    return `(${numericValue.substring(0, 2)}) ${numericValue.substring(2)}`;
+  }
+  
+  if (numericValue.length > 0) {
+    return `(${numericValue}`;
+  }
+
+  return numericValue;
+};
+
+
 export default function ClientsTab() {
   const [clients, setClients] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -68,10 +110,12 @@ export default function ClientsTab() {
     }
 
     try {
-      // Limpar o telefone se for uma string vazia para evitar problemas de tipagem no banco (embora o Supabase aceite)
+      // Limpar o telefone: remove a máscara antes de salvar no banco
+      const rawPhone = clientForm.phone.replace(/\D/g, '').trim();
+      
       const clientData = {
         name: clientForm.name.trim(),
-        phone: clientForm.phone.trim() || null, // Define como null se estiver vazio
+        phone: rawPhone || null, // Salva apenas números ou null
       };
 
       if (editingClient) {
@@ -98,6 +142,11 @@ export default function ClientsTab() {
     } catch (error: any) {
       toast.error(error.message || 'Erro ao salvar cliente');
     }
+  };
+  
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formattedValue = formatPhoneNumber(e.target.value);
+    setClientForm({ ...clientForm, phone: formattedValue });
   };
 
   const handleVehicleSubmit = async (e: React.FormEvent) => {
@@ -144,6 +193,14 @@ export default function ClientsTab() {
     }
   };
 
+  // Função para formatar o telefone ao carregar o formulário de edição
+  const openEditDialog = (client: any) => {
+    const formattedPhone = client.phone ? formatPhoneNumber(client.phone) : '';
+    setEditingClient(client);
+    setClientForm({ name: client.name, phone: formattedPhone });
+    setDialogOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -184,8 +241,9 @@ export default function ClientsTab() {
                 <Label>Telefone (Opcional)</Label>
                 <Input
                   value={clientForm.phone}
-                  onChange={(e) => setClientForm({ ...clientForm, phone: e.target.value })}
-                  // Removido o atributo required
+                  onChange={handlePhoneChange}
+                  placeholder="(xx) x xxxx-xxxx"
+                  maxLength={16} // (99) 9 9999-9999 tem 16 caracteres
                   className="bg-[#0a0a0a] border-[#2a2a2a]"
                 />
               </div>
@@ -210,11 +268,7 @@ export default function ClientsTab() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => {
-                        setEditingClient(client);
-                        setClientForm({ name: client.name, phone: client.phone || '' });
-                        setDialogOpen(true);
-                      }}
+                      onClick={() => openEditDialog(client)}
                       className="bg-blue-500/10 border-blue-500/20 text-blue-500"
                     >
                       <Edit className="w-3 h-3" />
@@ -231,7 +285,7 @@ export default function ClientsTab() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p className="text-sm text-gray-400">Telefone: {client.phone || 'N/A'}</p>
+                <p className="text-sm text-gray-400">Telefone: {client.phone ? formatPhoneNumber(client.phone) : 'N/A'}</p>
                 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
