@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Edit, Trash2, Car as CarIcon, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatPhoneNumber, formatPlateDisplay } from '@/lib/utils'; // Importando utilitários
 
-// Função de formatação de telefone
-const formatPhoneNumber = (value: string) => {
+// Função de formatação de telefone (mantida aqui para o onChange)
+const formatPhoneNumberLocal = (value: string) => {
   // 1. Remove todos os caracteres não numéricos
   const numericValue = value.replace(/\D/g, '');
 
@@ -53,8 +54,8 @@ const formatPhoneNumber = (value: string) => {
   return numericValue;
 };
 
-// Função de formatação de placa (XXX-XXXX)
-const formatPlate = (value: string) => {
+// Função de formatação de placa (mantida aqui para o onChange)
+const formatPlateInput = (value: string) => {
   // Remove caracteres não alfanuméricos e converte para maiúsculas
   const cleanValue = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
   
@@ -165,12 +166,12 @@ export default function ClientsTab() {
   };
   
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formattedValue = formatPhoneNumber(e.target.value);
+    const formattedValue = formatPhoneNumberLocal(e.target.value);
     setClientForm({ ...clientForm, phone: formattedValue });
   };
 
   const handlePlateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formattedValue = formatPlate(e.target.value);
+    const formattedValue = formatPlateInput(e.target.value);
     setVehicleForm({ ...vehicleForm, plate: formattedValue });
   };
 
@@ -178,6 +179,7 @@ export default function ClientsTab() {
     e.preventDefault();
     
     const modelYearCombined = `${vehicleForm.model.trim()}/${vehicleForm.year.trim()}`;
+    // Remove a máscara para salvar no banco (apenas 7 caracteres)
     const rawPlate = vehicleForm.plate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
     if (!vehicleForm.model || !vehicleForm.year || !rawPlate) {
@@ -248,7 +250,7 @@ export default function ClientsTab() {
 
   // Função para formatar o telefone ao carregar o formulário de edição
   const openEditDialog = (client: any) => {
-    const formattedPhone = client.phone ? formatPhoneNumber(client.phone) : '';
+    const formattedPhone = client.phone ? formatPhoneNumberLocal(client.phone) : '';
     setEditingClient(client);
     setClientForm({ name: client.name, phone: formattedPhone });
     setDialogOpen(true);
@@ -338,7 +340,7 @@ export default function ClientsTab() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p className="text-sm text-gray-400">Telefone: {client.phone ? formatPhoneNumber(client.phone) : 'N/A'}</p>
+                <p className="text-sm text-gray-400">Telefone: {client.phone ? formatPhoneNumberLocal(client.phone) : 'N/A'}</p>
                 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -364,7 +366,8 @@ export default function ClientsTab() {
                             <CarIcon className="w-4 h-4 text-blue-500" />
                             <div className="text-xs">
                               <p className="text-white font-medium">{vehicle.model_year} ({vehicle.type})</p>
-                              <p className="text-gray-400">{vehicle.plate} - Motorista: {vehicle.driver_name || 'N/A'}</p>
+                              {/* Usando formatPlateDisplay para exibir a placa formatada */}
+                              <p className="text-gray-400">{formatPlateDisplay(vehicle.plate)} - Motorista: {vehicle.driver_name || 'N/A'}</p>
                             </div>
                           </div>
                           <Button
