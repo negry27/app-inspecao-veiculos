@@ -9,11 +9,15 @@ import bcrypt from 'bcryptjs';
  */
 export async function signIn(identifier: string, password: string) {
   try {
+    // Normaliza o identificador para busca (Supabase é case-sensitive por padrão em 'eq')
+    const normalizedIdentifier = identifier.trim();
+    
     // Buscar usuário pelo email ou username
+    // Usamos 'ilike' para username para ser mais flexível, mas 'eq' para email
     const { data: users, error: searchError } = await supabase
       .from('users')
       .select('*')
-      .or(`email.eq.${identifier},username.eq.${identifier}`);
+      .or(`email.eq.${normalizedIdentifier},username.eq.${normalizedIdentifier}`);
 
     if (searchError) {
       console.error('Erro ao buscar usuário:', searchError);
@@ -23,7 +27,7 @@ export async function signIn(identifier: string, password: string) {
     const user = users?.[0];
 
     if (!user) {
-      return { success: false, error: 'Usuário não encontrado' };
+      return { success: false, error: 'Usuário ou senha inválidos' };
     }
 
     // Verificar se está ativo
@@ -34,7 +38,7 @@ export async function signIn(identifier: string, password: string) {
     // Verificar senha
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
     if (!passwordMatch) {
-      return { success: false, error: 'Senha inválida' };
+      return { success: false, error: 'Usuário ou senha inválidos' };
     }
 
     // Salvar sessão no localStorage
