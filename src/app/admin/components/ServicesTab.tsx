@@ -14,11 +14,11 @@ import { toast } from 'sonner';
 import { generateAndUploadPDF } from '@/lib/pdf-utils';
 import { useRouter } from 'next/navigation';
 
-// Tipo auxiliar para o serviço com dados de relacionamento
+// Tipo auxiliar para o serviço com dados de relacionamento (ajustado para arrays)
 interface ServiceWithDetails extends Service {
-  client: Client;
-  vehicle: Vehicle;
-  employee: User;
+  client: Client[];
+  vehicle: Vehicle[];
+  employee: User[];
 }
 
 export default function ServicesTab() {
@@ -68,8 +68,7 @@ export default function ServicesTab() {
       if (vehiclesData.error) throw vehiclesData.error;
       if (employeesData.error) throw employeesData.error;
 
-      // O Supabase retorna relacionamentos aninhados como objetos, mas a tipagem pode ser complexa.
-      // Assumimos que a query acima retorna os objetos diretamente.
+      // O Supabase retorna relacionamentos aninhados como arrays.
       setServices(servicesData as ServiceWithDetails[] || []);
       setClients(clientsData.data || []);
       setVehicles(vehiclesData.data || []);
@@ -118,6 +117,16 @@ export default function ServicesTab() {
   };
 
   const handleGeneratePDF = async (service: ServiceWithDetails) => {
+    // Acessa o primeiro elemento do array de relacionamento
+    const clientDetail = service.client?.[0];
+    const vehicleDetail = service.vehicle?.[0];
+    const employeeDetail = service.employee?.[0];
+
+    if (!clientDetail || !vehicleDetail || !employeeDetail) {
+        toast.error('Dados de cliente/veículo/funcionário incompletos para gerar PDF.');
+        return;
+    }
+
     if (service.pdf_url) {
       // Se o PDF já existe, apenas abre a URL
       window.open(service.pdf_url, '_blank');
@@ -138,9 +147,9 @@ export default function ServicesTab() {
 
       const details = {
         service: service,
-        client: service.client,
-        vehicle: service.vehicle,
-        employee: service.employee,
+        client: clientDetail,
+        vehicle: vehicleDetail,
+        employee: employeeDetail,
         sections: sectionsRes.data as ChecklistSection[],
         items: itemsRes.data as ChecklistItem[],
       };
@@ -258,74 +267,80 @@ export default function ServicesTab() {
       </div>
 
       <div className="grid gap-4">
-        {services.map((service) => (
-          <Card key={service.id} className="bg-[#1a1a1a] border-[#2a2a2a]">
-            <CardHeader>
-              <CardTitle className="text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <span>Serviço #{service.id.substring(0, 8)}...</span>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleEdit(service.id)}
-                    className="bg-blue-500/10 border-blue-500/20 text-blue-500 hover:bg-blue-500/20"
-                  >
-                    <Edit className="w-3 h-3 mr-1" />
-                    Editar
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleGeneratePDF(service)}
-                    disabled={pdfLoadingId === service.id}
-                    className="bg-green-500/10 border-green-500/20 text-green-500 hover:bg-green-500/20"
-                  >
-                    {pdfLoadingId === service.id ? (
-                      <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                    ) : (
-                      <Download className="w-3 h-3 mr-1" />
-                    )}
-                    {service.pdf_url ? 'Ver PDF' : 'Gerar PDF'}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleDelete(service.id)}
-                    className="bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500/20"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
+        {services.map((service) => {
+          const clientDetail = service.client?.[0];
+          const vehicleDetail = service.vehicle?.[0];
+          const employeeDetail = service.employee?.[0];
+
+          return (
+            <Card key={service.id} className="bg-[#1a1a1a] border-[#2a2a2a]">
+              <CardHeader>
+                <CardTitle className="text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <span>Serviço #{service.id.substring(0, 8)}...</span>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEdit(service.id)}
+                      className="bg-blue-500/10 border-blue-500/20 text-blue-500 hover:bg-blue-500/20"
+                    >
+                      <Edit className="w-3 h-3 mr-1" />
+                      Editar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleGeneratePDF(service)}
+                      disabled={pdfLoadingId === service.id}
+                      className="bg-green-500/10 border-green-500/20 text-green-500 hover:bg-green-500/20"
+                    >
+                      {pdfLoadingId === service.id ? (
+                        <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                      ) : (
+                        <Download className="w-3 h-3 mr-1" />
+                      )}
+                      {service.pdf_url ? 'Ver PDF' : 'Gerar PDF'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDelete(service.id)}
+                      className="bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500/20"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-400">Cliente</p>
+                    <p className="text-white">{clientDetail?.name || 'Não informado'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400">Veículo</p>
+                    <p className="text-white">{vehicleDetail?.model || 'Não informado'} - {vehicleDetail?.plate || 'Não informado'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400">Funcionário</p>
+                    <p className="text-white">{employeeDetail?.username || 'Não informado'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400">Data</p>
+                    <p className="text-white">{new Date(service.created_at).toLocaleDateString('pt-BR')}</p>
+                  </div>
                 </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-400">Cliente</p>
-                  <p className="text-white">{service.client?.name || 'Não informado'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400">Veículo</p>
-                  <p className="text-white">{service.vehicle?.model || 'Não informado'} - {service.vehicle?.plate || 'Não informado'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400">Funcionário</p>
-                  <p className="text-white">{service.employee?.username || 'Não informado'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400">Data</p>
-                  <p className="text-white">{new Date(service.created_at).toLocaleDateString('pt-BR')}</p>
-                </div>
-              </div>
-              {service.observations && (
-                <div>
-                  <p className="text-gray-400 text-sm mb-1">Observações</p>
-                  <p className="text-white text-sm">{service.observations}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+                {service.observations && (
+                  <div>
+                    <p className="text-gray-400 text-sm mb-1">Observações</p>
+                    <p className="text-white text-sm">{service.observations}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {services.length === 0 && (
