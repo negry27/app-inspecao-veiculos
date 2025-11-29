@@ -53,6 +53,27 @@ const formatPhoneNumber = (value: string) => {
   return numericValue;
 };
 
+// Função de formatação de placa (XXX-XXXX)
+const formatPlate = (value: string) => {
+  const numericValue = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  
+  if (numericValue.length > 7) {
+    return numericValue.substring(0, 7).replace(
+      /^([a-zA-Z0-9]{3})([a-zA-Z0-9]{4})$/,
+      '$1-$2'
+    );
+  }
+  
+  if (numericValue.length > 3) {
+    return numericValue.replace(
+      /^([a-zA-Z0-9]{3})([a-zA-Z0-9]*)$/,
+      '$1-$2'
+    );
+  }
+  
+  return numericValue;
+};
+
 
 export default function ClientsTab() {
   const [clients, setClients] = useState<any[]>([]);
@@ -65,8 +86,9 @@ export default function ClientsTab() {
   
   const [clientForm, setClientForm] = useState({ name: '', phone: '' });
   const [vehicleForm, setVehicleForm] = useState({
-    type: 'car' as 'car' | 'motorcycle' | 'van', // Re-adicionado
-    model_year: '', 
+    type: 'car' as 'car' | 'motorcycle' | 'van',
+    model: '', // Separado de model_year
+    year: '', // Separado de model_year
     plate: '',
     driver_name: '', 
     observations: ''
@@ -149,11 +171,25 @@ export default function ClientsTab() {
     setClientForm({ ...clientForm, phone: formattedValue });
   };
 
+  const handlePlateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formattedValue = formatPlate(e.target.value);
+    setVehicleForm({ ...vehicleForm, plate: formattedValue });
+  };
+
   const handleVehicleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const modelYearCombined = `${vehicleForm.model.trim()}/${vehicleForm.year.trim()}`;
 
-    if (!vehicleForm.model_year || !vehicleForm.plate) {
-        toast.error('Modelo/Ano e Placa são obrigatórios.');
+    if (!vehicleForm.model || !vehicleForm.year || !vehicleForm.plate) {
+        toast.error('Modelo, Ano e Placa são obrigatórios.');
+        return;
+    }
+    
+    // Remove a máscara da placa antes de salvar
+    const rawPlate = vehicleForm.plate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    if (rawPlate.length < 7) {
+        toast.error('A placa deve ter 7 caracteres (ex: ABC-1234).');
         return;
     }
 
@@ -162,9 +198,9 @@ export default function ClientsTab() {
         .from('vehicles')
         .insert([{ 
             client_id: selectedClientId,
-            type: vehicleForm.type, // Re-adicionado
-            model_year: vehicleForm.model_year,
-            plate: vehicleForm.plate,
+            type: vehicleForm.type,
+            model_year: modelYearCombined, // Combinando Modelo/Ano
+            plate: rawPlate, // Salvando sem máscara
             driver_name: vehicleForm.driver_name || null,
             observations: vehicleForm.observations || null,
         }]);
@@ -172,7 +208,7 @@ export default function ClientsTab() {
       if (error) throw error;
       toast.success('Veículo adicionado!');
       setVehicleDialogOpen(false);
-      setVehicleForm({ type: 'car', model_year: '', plate: '', driver_name: '', observations: '' });
+      setVehicleForm({ type: 'car', model: '', year: '', plate: '', driver_name: '', observations: '' });
       loadClients();
     } catch (error: any) {
       toast.error(error.message || 'Erro ao adicionar veículo');
@@ -367,21 +403,38 @@ export default function ClientsTab() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Modelo/Ano</Label>
-              <Input
-                value={vehicleForm.model_year}
-                onChange={(e) => setVehicleForm({ ...vehicleForm, model_year: e.target.value })}
-                required
-                className="bg-[#0a0a0a] border-[#2a2a2a]"
-              />
+            
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label>Modelo</Label>
+                    <Input
+                        value={vehicleForm.model}
+                        onChange={(e) => setVehicleForm({ ...vehicleForm, model: e.target.value })}
+                        required
+                        className="bg-[#0a0a0a] border-[#2a2a2a]"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label>Ano</Label>
+                    <Input
+                        value={vehicleForm.year}
+                        onChange={(e) => setVehicleForm({ ...vehicleForm, year: e.target.value })}
+                        required
+                        type="number"
+                        maxLength={4}
+                        className="bg-[#0a0a0a] border-[#2a2a2a]"
+                    />
+                </div>
             </div>
+            
             <div className="space-y-2">
-              <Label>Placa</Label>
+              <Label>Placa (XXX-XXXX)</Label>
               <Input
                 value={vehicleForm.plate}
-                onChange={(e) => setVehicleForm({ ...vehicleForm, plate: e.target.value })}
+                onChange={handlePlateChange}
                 required
+                maxLength={8} // 3 letras + hífen + 4 números/letras
+                placeholder="ABC-1234"
                 className="bg-[#0a0a0a] border-[#2a2a2a]"
               />
             </div>
