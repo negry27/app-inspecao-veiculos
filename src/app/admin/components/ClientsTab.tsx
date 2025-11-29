@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Edit, Trash2, Car as CarIcon, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatPhoneNumber, formatPlateDisplay } from '@/lib/utils'; // Importando utilitários
+import { formatPlateDisplay } from '@/lib/utils'; // Removido formatPhoneNumber
 
 // Função de formatação de telefone (mantida aqui para o onChange)
 const formatPhoneNumberLocal = (value: string) => {
@@ -171,7 +171,7 @@ export default function ClientsTab() {
   };
 
   const handlePlateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formattedValue = formatPlateInput(e.target.value);
+    const formattedValue = e.target.value.toUpperCase(); // Simplificado para apenas maiúsculas
     setVehicleForm({ ...vehicleForm, plate: formattedValue });
   };
 
@@ -179,16 +179,18 @@ export default function ClientsTab() {
     e.preventDefault();
     
     const modelYearCombined = `${vehicleForm.model.trim()}/${vehicleForm.year.trim()}`;
-    // Remove a máscara para salvar no banco (apenas 7 caracteres)
-    const rawPlate = vehicleForm.plate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    // A placa é salva como o usuário digitou, mas em maiúsculas.
+    const rawPlate = vehicleForm.plate.trim().toUpperCase();
 
     if (!vehicleForm.model || !vehicleForm.year || !rawPlate) {
         toast.error('Modelo, Ano e Placa são obrigatórios.');
         return;
     }
     
-    if (rawPlate.length !== 7) {
-        toast.error('A placa deve ter 7 caracteres (ex: ABC1234).');
+    // Validação básica de comprimento (7 caracteres é o padrão, mas permitimos o hífen)
+    const cleanPlate = rawPlate.replace(/[^a-zA-Z0-9]/g, '');
+    if (cleanPlate.length < 7) {
+        toast.error('A placa deve ter no mínimo 7 caracteres alfanuméricos.');
         return;
     }
 
@@ -199,7 +201,7 @@ export default function ClientsTab() {
             client_id: selectedClientId,
             type: vehicleForm.type,
             model_year: modelYearCombined, // Combinando Modelo/Ano
-            plate: rawPlate, // Salvando sem máscara
+            plate: rawPlate, // Salvando como digitado (pode conter hífen)
             driver_name: vehicleForm.driver_name || null,
             observations: vehicleForm.observations || null,
         }]);
@@ -366,7 +368,7 @@ export default function ClientsTab() {
                             <CarIcon className="w-4 h-4 text-blue-500" />
                             <div className="text-xs">
                               <p className="text-white font-medium">{vehicle.model_year} ({vehicle.type})</p>
-                              {/* Usando formatPlateDisplay para exibir a placa formatada */}
+                              {/* Usando formatPlateDisplay (que agora apenas limpa) para exibição */}
                               <p className="text-gray-400">{formatPlateDisplay(vehicle.plate)} - Motorista: {vehicle.driver_name || 'N/A'}</p>
                             </div>
                           </div>
@@ -436,13 +438,13 @@ export default function ClientsTab() {
             </div>
             
             <div className="space-y-2">
-              <Label>Placa (XXX-XXXX)</Label>
+              <Label>Placa</Label>
               <Input
                 value={vehicleForm.plate}
-                onChange={handlePlateChange} // Usando a função de formatação aqui
+                onChange={handlePlateChange} // Apenas converte para maiúsculas
                 required
-                maxLength={8} // 3 letras + hífen + 4 números/letras
-                placeholder="ABC-1234"
+                maxLength={8} // Mantemos um limite razoável
+                placeholder="ABC1234 ou ABC-1234"
                 className="bg-[#0a0a0a] border-[#2a2a2a]"
               />
             </div>
