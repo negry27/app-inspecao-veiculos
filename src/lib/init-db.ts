@@ -57,57 +57,29 @@ export async function initializeDatabase(forceReset = true): Promise<InitResult>
   });
 
   try {
-    // Tenta init; se falhar e forceReset=true → reset + init novamente
-    try {
-      await dyad.init();
-    } catch (initErr) {
-      console.warn("Dyad init falhou:", initErr);
-      if (forceReset) {
-        console.warn("Executando reset forçado...");
-        await dyad.reset();
-        await dyad.init();
-      } else {
-        throw initErr;
-      }
-    }
+    await dyad.init();
 
-    // Verifica hasUserMaster robustamente
     let hasMaster = false;
     try {
       hasMaster = await dyad.hasUserMaster();
     } catch (hasErr) {
-      console.warn("hasUserMaster falhou:", hasErr);
-      if (forceReset) {
-        await dyad.reset();
-        await dyad.init();
-        hasMaster = false;
-      } else {
-        throw hasErr;
-      }
+      console.warn("hasUserMaster falhou, assumindo que o Master precisa ser recriado:", hasErr);
+      hasMaster = false;
     }
 
-    // Se não tem master, cria
+    // Se não tem master, força o reset e cria
     if (!hasMaster) {
-      console.log("👤 Nenhum master encontrado. Criando...");
+      console.log("👤 Nenhum master encontrado. Forçando reset e recriação...");
+      
+      // Força o reset para limpar qualquer registro parcial ou antigo
+      await dyad.reset(); 
+      
       try {
         await dyad.createUserMaster(MASTER_CONFIG);
         console.log("✔ Master criado com sucesso.");
       } catch (createErr: any) {
-        console.error("Erro ao criar master (primeira tentativa):", createErr);
-
-        // Se falhar, tenta um reset forçado e uma segunda tentativa
-        console.warn("Tentando reset forçado e recriação do master...");
-        await dyad.reset();
-        await dyad.init();
-
-        try {
-            // Tenta criar novamente (lançará se falhar)
-            await dyad.createUserMaster(MASTER_CONFIG);
-            console.log("✔ Master recriado com sucesso após reset.");
-        } catch (retryErr: any) {
-            console.error("Erro ao criar master (segunda tentativa):", retryErr);
-            throw new Error(`Falha crítica ao criar usuário master: ${retryErr.message || 'Erro desconhecido'}`);
-        }
+        console.error("Erro ao criar master:", createErr);
+        throw new Error(`Falha crítica ao criar usuário master: ${createErr.message || 'Erro desconhecido'}`);
       }
     } else {
       console.log("✔ Master já presente — seguindo normalmente.");
