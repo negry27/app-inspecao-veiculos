@@ -78,11 +78,12 @@ export async function generateAndUploadPDF(details: ServiceDetails): Promise<{ s
     const pdfBlob = await generateServicePDF(pdfData);
     
     // 3. Fazer upload para o Supabase Storage
-    const fileName = `reports/${service.id}-${format(new Date(), 'yyyyMMddHHmmss')}.pdf`;
+    // Usando o formato que você sugeriu, mas garantindo que o nome do arquivo seja único
+    const fileName = `${service.id}-${format(new Date(), 'yyyyMMddHHmmss')}`;
     
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('service_reports') // Assumindo que existe um bucket chamado 'service_reports'
-      .upload(fileName, pdfBlob, {
+      .from('pdf-reports') // <-- Usando 'pdf-reports'
+      .upload(`reports/${fileName}.pdf`, pdfBlob, {
         cacheControl: '3600',
         upsert: true,
         contentType: 'application/pdf',
@@ -92,8 +93,8 @@ export async function generateAndUploadPDF(details: ServiceDetails): Promise<{ s
 
     // 4. Obter a URL pública
     const { data: publicUrlData } = supabase.storage
-      .from('service_reports')
-      .getPublicUrl(fileName);
+      .from('pdf-reports') // <-- Usando 'pdf-reports'
+      .getPublicUrl(`reports/${fileName}.pdf`);
       
     const publicUrl = publicUrlData.publicUrl;
 
