@@ -300,7 +300,7 @@ export default function ServicesTab() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-white">Gerenciar Serviços</h2>
+        <h2 className="text-2xl font-bold text-red-500">Gerenciar Serviços</h2>
         {/* Botão de Novo Serviço removido */}
       </div>
 

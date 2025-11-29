@@ -163,7 +163,7 @@ export default function ChecklistTab() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-white">Gerenciar Checklist</h2>
+        <h2 className="text-2xl font-bold text-red-500">Gerenciar Checklist</h2>
         <div className="flex gap-2">
           {!initialized && (
             <Button onClick={initializeDefaultChecklist} className="bg-green-600 hover:bg-green-700">

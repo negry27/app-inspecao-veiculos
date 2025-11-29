@@ -121,7 +121,7 @@ export default function CargosTab() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-white">Gerenciar Cargos</h2>
+        <h2 className="text-2xl font-bold text-red-500">Gerenciar Cargos</h2>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={resetForm}>
