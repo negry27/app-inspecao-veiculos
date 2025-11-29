@@ -200,13 +200,20 @@ export default function ClientsTab() {
       ]);
 
       if (error) {
-        // Log seguro e serializável
-        console.error("ERRO SUPABASE:", {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
-        });
+        // Log seguro (apenas string)
+        console.error(
+          "ERRO SUPABASE: " +
+            JSON.stringify(
+              {
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+                code: error.code,
+              },
+              null,
+              2
+            )
+        );
 
         toast.error(`Erro ao adicionar veículo: ${error.message}`);
         return;
@@ -230,16 +237,9 @@ export default function ClientsTab() {
 
       loadClients();
     } catch (err: any) {
-      // Tratamento seguro de erro inesperado
-      const safeMessage =
-        err?.message ||
-        err?.details ||
-        err?.hint ||
-        "Erro inesperado ao adicionar o veículo.";
-
-      console.error("ERRO DESCONHECIDO:", safeMessage);
-
-      toast.error(`Erro ao adicionar veículo: ${safeMessage}`);
+      // Tratamento seguro de erro inesperado (apenas string)
+      console.error("ERRO DESCONHECIDO: " + (err?.message || "Erro desconhecido."));
+      toast.error("Erro inesperado ao adicionar o veículo.");
     }
   };
 
