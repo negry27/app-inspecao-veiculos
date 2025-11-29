@@ -27,15 +27,14 @@ function waitForInit(): Promise<Dyad | null> {
   return new Promise(resolve => {
     const check = () => {
       if (dyadInstance) return resolve(dyadInstance);
-      setTimeout(check, 50);
+      setTimeout(check, 30);
     };
     check();
   });
 }
 
 /**
- * Inicializa o Dyad, verifica e cria o usuário master de forma robusta.
- * Retorna a instância do Dyad.
+ * Inicializa o banco de dados e cria o usuário administrador master
  */
 export async function initializeDatabase(): Promise<InitResult> {
   if (typeof window === 'undefined') {
@@ -43,72 +42,67 @@ export async function initializeDatabase(): Promise<InitResult> {
   }
   
   if (dyadInstance) return { success: true, message: 'Dyad já inicializado.' };
-
-  // Evita rodar em paralelo em duas telas
   if (initializing) {
-    await waitForInit();
-    return { success: true, message: 'Dyad inicializado por outra instância.' };
+    const dyad = await waitForInit();
+    return { success: true, message: 'Dyad inicializado por outra instância.', user: dyad };
   }
 
   initializing = true;
   console.log("🔧 Inicializando Dyad...");
 
+  const dyad = new Dyad({
+    encryptionKey: ENCRYPTION_KEY,
+    namespace: "my-app-db",
+    verbose: true,
+  });
+
   try {
-    const dyad = new Dyad({
-      encryptionKey: ENCRYPTION_KEY,
-      namespace: "my-app-db",
-      verbose: true,
-    });
-
     await dyad.init();
-
-    // 2. Verifica se já existe master
-    let hasMaster = false;
-
-    try {
-      hasMaster = await dyad.hasUserMaster();
-    } catch (err) {
-      console.warn("⚠ Falha ao verificar master, resetando banco...");
-      await dyad.reset();
-      hasMaster = false; // Força a criação após o reset
-    }
-
-    if (!hasMaster) {
-      console.log("👤 Nenhum master encontrado. Criando...");
-      try {
-        await dyad.createUserMaster(MASTER_CONFIG);
-        console.log("✔ Master criado com sucesso");
-      } catch (err: any) {
-        const errorMessage = String(err);
-        
-        if (errorMessage.includes("duplicate") || errorMessage.includes("unique")) {
-          console.warn("✔ Master já existia — ignorando criação");
-        } else {
-          console.error("❌ Erro ao criar master, resetando banco...", err);
-          await dyad.reset();
-
-          // Tenta novamente
-          await dyad.createUserMaster(MASTER_CONFIG);
-          console.log("✔ Banco resetado e master recriado");
-        }
-      }
-    } else {
-      console.log("✔ Master já existe, seguindo normalmente");
-    }
-
-    dyadInstance = dyad;
-    return { success: true, message: 'Inicialização completa.' };
-
-  } catch (error: any) {
-    console.error("❌ Erro crítico no Dyad:", error);
-
-    // Último recurso → limpar base quebrada
-    if (dyadInstance) {
-      await dyadInstance.reset();
-    }
-    
-    return { success: false, error: error.message || 'Erro crítico na inicialização.' };
-  } finally {
-    initializing = false;
+  } catch (e) {
+    console.warn("⚠ Dyad init falhou, resetando...");
+    await dyad.reset();
+    await dyad.init();
   }
+
+  // 1 — Verifica se existe master
+  let hasMaster = false;
+  try {
+    hasMaster = await dyad.hasUserMaster();
+  } catch (e) {
+    console.warn("⚠ Erro ao verificar master, resetando banco...");
+    await dyad.reset();
+    await dyad.init();
+  }
+
+  // 2 — Se não existe master, cria
+  if (!hasMaster) {
+    console.log("👤 Nenhum master encontrado. Criando...");
+    try {
+      await dyad.createUserMaster(MASTER_CONFIG);
+      console.log("✔ Master criado com sucesso");
+    } catch (err: any) {
+      const errorMessage = String(err);
+      
+      if (errorMessage.includes("duplicate") || errorMessage.includes("unique")) {
+        console.warn("✔ Master já existia — ignorando criação");
+      } else {
+        console.error("❌ Erro ao criar master:", err);
+
+        // ✨ Erro {} → reset forçado
+        console.warn("⚠ Resetando banco devido a erro vazio ou falha crítica...");
+        await dyad.reset();
+        await dyad.init();
+
+        // Tenta novamente
+        await dyad.createUserMaster(MASTER_CONFIG);
+        console.log("✔ Banco resetado e master recriado");
+      }
+    }
+  } else {
+    console.log("✔ Master já existe, seguindo normalmente");
+  }
+
+  dyadInstance = dyad;
+  initializing = false;
+  return { success: true, message: 'Inicialização completa.', user: dyadInstance };
 }
