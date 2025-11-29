@@ -14,6 +14,7 @@ interface ServiceRecord {
     id: string;
     created_at: string;
     pdf_url: string | null;
+    checklist_data: any; // Adicionado para buscar dados embutidos
     // Ajustado para refletir a estrutura de array retornada pelo Supabase para relacionamentos aninhados
     client: { name: string }[]; 
     vehicle: { model: string, plate: string }[];
@@ -41,7 +42,7 @@ export default function ServiceHistoryPage() {
     try {
       const { data, error } = await supabase
         .from('services')
-        .select('id, created_at, pdf_url, client:client_id(name), vehicle:vehicle_id(model, plate)')
+        .select('id, created_at, pdf_url, checklist_data, client:client_id(name), vehicle:vehicle_id(model, plate)')
         .eq('employee_id', employeeId)
         .order('created_at', { ascending: false });
 
@@ -139,10 +140,15 @@ export default function ServiceHistoryPage() {
             ) : (
               <div className="space-y-4">
                 {services.map((service) => {
-                  // Acessando o primeiro elemento do array de relacionamento
-                  const clientName = service.client?.[0]?.name || 'N/A';
-                  const vehicleModel = service.vehicle?.[0]?.model || 'N/A';
-                  const vehiclePlate = service.vehicle?.[0]?.plate || 'N/A';
+                  // Prioriza dados embutidos (para novos serviços)
+                  const embeddedClient = service.checklist_data?.__meta?.client_details;
+                  const embeddedVehicle = service.checklist_data?.__meta?.vehicle_details;
+                  
+                  // Fallback para dados de relacionamento (para serviços antigos)
+                  const clientName = embeddedClient?.name || service.client?.[0]?.name || 'N/A';
+                  const vehicleModel = embeddedVehicle?.model || service.vehicle?.[0]?.model || 'N/A';
+                  const vehiclePlate = embeddedVehicle?.plate || service.vehicle?.[0]?.plate || 'N/A';
+                  
                   const pdfAvailable = !!service.pdf_url;
 
                   return (
@@ -152,9 +158,7 @@ export default function ServiceHistoryPage() {
                           <FileText className="w-4 h-4 text-blue-400" />
                           Inspeção ID: <span className="text-blue-400 truncate max-w-[150px] sm:max-w-none">{service.id.substring(0, 8)}...</span>
                         </p>
-                        
-                        {/* Detalhes do Cliente e Veículo em uma linha responsiva */}
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-2 text-xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 text-xs">
                             <div className="flex items-center gap-1 text-gray-400">
                                 <User className="w-3 h-3" />
                                 Cliente: <span className="text-white font-medium">{clientName}</span>
@@ -164,7 +168,6 @@ export default function ServiceHistoryPage() {
                                 Veículo: <span className="text-white font-medium">{vehicleModel} ({vehiclePlate})</span>
                             </div>
                         </div>
-                        
                         <p className="text-xs text-gray-500 mt-2">
                           Data: {format(new Date(service.created_at), 'dd/MM/yyyy HH:mm')}
                         </p>

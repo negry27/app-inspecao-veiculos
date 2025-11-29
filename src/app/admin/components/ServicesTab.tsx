@@ -175,7 +175,14 @@ export default function ServicesTab() {
     const vehicleDetail = service.vehicle?.[0];
     const employeeDetail = service.employee?.[0];
 
-    if (!clientDetail || !vehicleDetail || !employeeDetail) {
+    // Prioriza dados embutidos (para novos serviços)
+    const embeddedClient = service.checklist_data?.__meta?.client_details;
+    const embeddedVehicle = service.checklist_data?.__meta?.vehicle_details;
+
+    const finalClient = embeddedClient || clientDetail;
+    const finalVehicle = embeddedVehicle || vehicleDetail;
+
+    if (!finalClient || !finalVehicle || !employeeDetail) {
         toast.error('Dados de cliente/veículo/funcionário incompletos para gerar PDF. Edite o serviço e preencha o checklist.');
         return;
     }
@@ -199,10 +206,31 @@ export default function ServicesTab() {
       if (sectionsRes.error) throw sectionsRes.error;
       if (itemsRes.error) throw itemsRes.error;
 
+      // Cria um objeto Client e Vehicle tipado a partir dos dados finais
+      const clientForPdf: Client = {
+        id: service.client_id,
+        name: finalClient.name,
+        phone: finalClient.phone,
+        created_at: '', // Placeholder
+        updated_at: '', // Placeholder
+      };
+      
+      const vehicleForPdf: Vehicle = {
+        id: service.vehicle_id,
+        client_id: service.client_id,
+        type: finalVehicle.type,
+        model: finalVehicle.model,
+        plate: finalVehicle.plate,
+        km_current: finalVehicle.km_current,
+        observations: finalVehicle.observations,
+        created_at: '', // Placeholder
+        updated_at: '', // Placeholder
+      };
+
       const details = {
         service: service,
-        client: clientDetail,
-        vehicle: vehicleDetail,
+        client: clientForPdf,
+        vehicle: vehicleForPdf,
         employee: employeeDetail,
         sections: sectionsRes.data as ChecklistSection[],
         items: itemsRes.data as ChecklistItem[],
@@ -343,9 +371,13 @@ export default function ServicesTab() {
 
       <div className="grid gap-4">
         {services.map((service) => {
-          // Acessando o primeiro elemento do array de relacionamento
-          const clientDetail = service.client?.[0];
-          const vehicleDetail = service.vehicle?.[0];
+          // Prioriza dados embutidos (para novos serviços)
+          const embeddedClient = service.checklist_data?.__meta?.client_details;
+          const embeddedVehicle = service.checklist_data?.__meta?.vehicle_details;
+          
+          // Fallback para dados de relacionamento (para serviços antigos)
+          const clientDetail = embeddedClient || service.client?.[0];
+          const vehicleDetail = embeddedVehicle || service.vehicle?.[0];
           const employeeDetail = service.employee?.[0];
           const pdfAvailable = !!service.pdf_url;
 

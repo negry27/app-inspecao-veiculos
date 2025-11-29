@@ -69,12 +69,34 @@ export default function NewServicePage() {
     setSubmitting(true);
 
     try {
+      const selectedClient = clients.find(c => c.id === selectedClientId);
+      const selectedVehicle = selectedClient?.vehicles.find(v => v.id === selectedVehicleId);
+
+      if (!selectedClient || !selectedVehicle) {
+        throw new Error('Cliente ou veículo não encontrado nos dados carregados.');
+      }
+
       // 1. Criar um novo registro de serviço
       const newServiceData: Partial<Service> = {
         employee_id: currentUser.id,
         client_id: selectedClientId,
         vehicle_id: selectedVehicleId,
-        checklist_data: {}, // Inicialmente vazio
+        // Salvar detalhes completos do cliente e veículo no checklist_data
+        checklist_data: {
+          __meta: {
+            client_details: {
+              name: selectedClient.name,
+              phone: selectedClient.phone,
+            },
+            vehicle_details: {
+              type: selectedVehicle.type,
+              model: selectedVehicle.model,
+              plate: selectedVehicle.plate,
+              km_current: selectedVehicle.km_current,
+              observations: selectedVehicle.observations,
+            }
+          }
+        }, 
         photos: [],
         created_at: new Date().toISOString(),
       };
