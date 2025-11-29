@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation';
 import { getCurrentUser, signOut } from '@/lib/auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Users, Car, ClipboardList, FileText, LogOut, Loader2 } from 'lucide-react';
+import { Users, Car, ClipboardList, FileText, LogOut, Loader2, Briefcase } from 'lucide-react';
 import EmployeesTab from './components/EmployeesTab';
 import ClientsTab from './components/ClientsTab';
 import ChecklistTab from './components/ChecklistTab';
 import ServicesTab from './components/ServicesTab';
+import CargosTab from './components/CargosTab'; // Importando o novo componente
 
 export default function AdminPage() {
   const router = useRouter();
@@ -68,7 +69,7 @@ export default function AdminPage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="employees" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-[#1a1a1a] border border-[#2a2a2a]">
+          <TabsList className="grid w-full grid-cols-5 bg-[#1a1a1a] border border-[#2a2a2a]">
             <TabsTrigger value="employees" className="data-[state=active]:bg-blue-600">
               <Users className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Funcionários</span>
@@ -84,6 +85,10 @@ export default function AdminPage() {
             <TabsTrigger value="services" className="data-[state=active]:bg-blue-600">
               <FileText className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Serviços</span>
+            </TabsTrigger>
+            <TabsTrigger value="cargos" className="data-[state=active]:bg-blue-600">
+              <Briefcase className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Cargos</span>
             </TabsTrigger>
           </TabsList>
 
@@ -101,6 +106,10 @@ export default function AdminPage() {
 
           <TabsContent value="services">
             <ServicesTab />
+          </TabsContent>
+          
+          <TabsContent value="cargos">
+            <CargosTab />
           </TabsContent>
         </Tabs>
       </main>
