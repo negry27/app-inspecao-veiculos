@@ -158,49 +158,88 @@ export default function ClientsTab() {
 
   const handleVehicleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const modelYearCombined = `${vehicleForm.model.trim()}/${vehicleForm.year.trim()}`;
-    
-    // Remove caracteres não alfanuméricos para salvar no banco (apenas 7 caracteres)
-    const rawPlate = vehicleForm.plate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
-    if (!vehicleForm.model || !vehicleForm.year || !rawPlate) {
-        toast.error('Modelo, Ano e Placa são obrigatórios.');
-        return;
+    // ----------------------
+    // Validações
+    // ----------------------
+
+    if (!selectedClientId) {
+      toast.error("Selecione um cliente antes de adicionar o veículo.");
+      return;
     }
-    
-    // Validação básica de comprimento (7 caracteres é o padrão)
+
+    const model = vehicleForm.model.trim();
+    const year = vehicleForm.year.trim();
+    const rawPlate = vehicleForm.plate.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+
+    if (!model || !year || !rawPlate) {
+      toast.error("Modelo, Ano e Placa são obrigatórios.");
+      return;
+    }
+
     if (rawPlate.length < 7) {
-        toast.error('A placa deve ter no mínimo 7 caracteres alfanuméricos.');
-        return;
+      toast.error("A placa deve ter no mínimo 7 caracteres alfanuméricos.");
+      return;
     }
 
+    const modelYearCombined = `${model}/${year}`;
+
+    // ----------------------
+    // Inserção no Supabase
+    // ----------------------
     try {
-      const { error } = await supabase
-        .from('vehicles')
-        .insert([{ 
-            client_id: selectedClientId,
-            type: vehicleForm.type,
-            model_year: modelYearCombined, // Combinando Modelo/Ano
-            plate: rawPlate, // Salvando apenas os 7 caracteres alfanuméricos
-            driver_name: vehicleForm.driver_name || null,
-            observations: vehicleForm.observations || null,
-        }]);
+      const { error } = await supabase.from("vehicles").insert([
+        {
+          client_id: selectedClientId,
+          type: vehicleForm.type,
+          model_year: modelYearCombined,
+          plate: rawPlate,
+          driver_name: vehicleForm.driver_name || null,
+          observations: vehicleForm.observations || null,
+        },
+      ]);
 
       if (error) {
-        console.log("ERRO REAL:", error); // Logando o erro detalhado
-        throw error;
+        // Log seguro e serializável
+        console.error("ERRO SUPABASE:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+        });
+
+        toast.error(`Erro ao adicionar veículo: ${error.message}`);
+        return;
       }
-      
-      toast.success('Veículo adicionado!');
+
+      // ----------------------
+      // Sucesso
+      // ----------------------
+      toast.success("Veículo adicionado!");
+
       setVehicleDialogOpen(false);
-      setVehicleForm({ type: 'car', model: '', year: '', plate: '', driver_name: '', observations: '' });
+
+      setVehicleForm({
+        type: "car",
+        model: "",
+        year: "",
+        plate: "",
+        driver_name: "",
+        observations: "",
+      });
+
       loadClients();
-    } catch (error: any) {
-      // Melhorar a exibição do erro
-      const errorMessage = error.message || 'Erro desconhecido ao adicionar veículo.';
-      console.error('Erro ao adicionar veículo:', error);
-      toast.error(`Erro ao adicionar veículo: ${errorMessage}`);
+    } catch (err: any) {
+      // Tratamento seguro de erro inesperado
+      const safeMessage =
+        err?.message ||
+        err?.details ||
+        err?.hint ||
+        "Erro inesperado ao adicionar o veículo.";
+
+      console.error("ERRO DESCONHECIDO:", safeMessage);
+
+      toast.error(`Erro ao adicionar veículo: ${safeMessage}`);
     }
   };
 
