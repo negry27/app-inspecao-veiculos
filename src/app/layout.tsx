@@ -16,8 +16,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Criado com a Lasy",
-  description: "Projeto criado com Lasy AI",
+  title: "Sistema de Inspeção Veicular",
+  description: "Aplicação para gerenciamento e execução de checklists de inspeção veicular.",
+  // PWA Meta tags for iOS
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Inspeção',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  // PWA Meta tags for Android/General
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
@@ -28,6 +39,11 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <head>
+        {/* PWA Meta Tags */}
+        <meta name="theme-color" content="#0a0a0a" />
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/icon.svg" />
+        
         {/* Load Lasy bridge script after hydration to avoid hydration mismatches */}
         <Script 
           src="/lasy-bridge.js" 

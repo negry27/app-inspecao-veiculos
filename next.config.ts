@@ -1,4 +1,14 @@
 import type { NextConfig } from "next";
+import withPWA from 'next-pwa';
+
+const isDev = process.env.NODE_ENV !== 'production';
+
+const pwaConfig = withPWA({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: isDev, // Desabilita PWA em desenvolvimento
+});
 
 const nextConfig: NextConfig = {
   devIndicators: false, // Remove widget de desenvolvimento Next.js
@@ -224,4 +234,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default pwaConfig(nextConfig);
