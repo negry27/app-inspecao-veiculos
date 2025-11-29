@@ -58,18 +58,18 @@ const formatPlate = (value: string) => {
   // Remove caracteres não alfanuméricos e converte para maiúsculas
   const cleanValue = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
   
-  // Limita a 7 caracteres (3 letras/números + 4 números/letras)
-  const numericValue = cleanValue.substring(0, 7);
+  // Limita a 7 caracteres (padrão Mercosul ou antigo)
+  const rawPlate = cleanValue.substring(0, 7);
   
-  if (numericValue.length > 3) {
+  if (rawPlate.length > 3) {
     // Aplica o hífen após o terceiro caractere
-    return numericValue.replace(
+    return rawPlate.replace(
       /^([a-zA-Z0-9]{3})([a-zA-Z0-9]*)$/,
       '$1-$2'
     );
   }
   
-  return numericValue;
+  return rawPlate;
 };
 
 
@@ -178,6 +178,7 @@ export default function ClientsTab() {
     e.preventDefault();
     
     const modelYearCombined = `${vehicleForm.model.trim()}/${vehicleForm.year.trim()}`;
+    // Remove a máscara da placa para obter o valor bruto
     const rawPlate = vehicleForm.plate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
     if (!vehicleForm.model || !vehicleForm.year || !rawPlate) {
@@ -185,7 +186,8 @@ export default function ClientsTab() {
         return;
     }
     
-    if (rawPlate.length < 7) {
+    // A placa deve ter exatamente 7 caracteres alfanuméricos (Mercosul ou antigo)
+    if (rawPlate.length !== 7) {
         toast.error('A placa deve ter 7 caracteres (ex: ABC1234).');
         return;
     }
@@ -208,6 +210,7 @@ export default function ClientsTab() {
       setVehicleForm({ type: 'car', model: '', year: '', plate: '', driver_name: '', observations: '' });
       loadClients();
     } catch (error: any) {
+      console.error('Erro ao adicionar veículo:', error);
       toast.error(error.message || 'Erro ao adicionar veículo');
     }
   };
