@@ -86,7 +86,7 @@ export async function initializeDatabase(forceReset = true): Promise<InitResult>
       }
     }
 
-    // Se não tem master, cria — se falhar com erro vazio, força reset e tenta novamente
+    // Se não tem master, cria
     if (!hasMaster) {
       console.log("👤 Nenhum master encontrado. Criando...");
       try {
@@ -95,15 +95,19 @@ export async function initializeDatabase(forceReset = true): Promise<InitResult>
       } catch (createErr: any) {
         console.error("Erro ao criar master (primeira tentativa):", createErr);
 
-        // se o erro aparenta ser silencioso ({} ou init/crypto) -> reset forçado e retry
+        // Se falhar, tenta um reset forçado e uma segunda tentativa
         console.warn("Tentando reset forçado e recriação do master...");
         await dyad.reset();
         await dyad.init();
 
-        // Tenta criar novamente (lançará se falhar)
-        await dyad.createUserMaster(MASTER_CONFIG);
-
-        console.log("✔ Master recriado com sucesso após reset.");
+        try {
+            // Tenta criar novamente (lançará se falhar)
+            await dyad.createUserMaster(MASTER_CONFIG);
+            console.log("✔ Master recriado com sucesso após reset.");
+        } catch (retryErr: any) {
+            console.error("Erro ao criar master (segunda tentativa):", retryErr);
+            throw new Error(`Falha crítica ao criar usuário master: ${retryErr.message || 'Erro desconhecido'}`);
+        }
       }
     } else {
       console.log("✔ Master já presente — seguindo normalmente.");

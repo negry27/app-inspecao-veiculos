@@ -69,8 +69,10 @@ export class Dyad {
       });
 
     if (error) {
-      if (this.verbose) console.error('[Dyad Wrapper] Error creating master user:', error);
-      throw new Error(error.message);
+      // Melhorando o log de erro
+      const errorMessage = error.message || JSON.stringify(error);
+      if (this.verbose) console.error('[Dyad Wrapper] Error creating master user:', errorMessage);
+      throw new Error(errorMessage);
     }
   }
 
