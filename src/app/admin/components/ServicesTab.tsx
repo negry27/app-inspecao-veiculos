@@ -133,11 +133,48 @@ export default function ServicesTab() {
     }
 
     if (service.pdf_url) {
-      // Se o PDF já existe, apenas abre a URL
-      window.open(service.pdf_url, '_blank');
+      setPdfLoadingId(service.id);
+      try {
+        // Extrai o caminho do arquivo do URL público
+        // Ex: https://hbomzwcmalfmfbqqlyus.supabase.co/storage/v1/object/public/pdf-reports/reports/uuid-timestamp.pdf
+        const urlParts = service.pdf_url.split('/public/pdf-reports/');
+        if (urlParts.length < 2) {
+            throw new Error('URL do PDF inválida.');
+        }
+        const filePath = urlParts[1];
+        
+        // Usa a função download do Supabase Storage para forçar o download
+        const { data, error } = await supabase.storage
+          .from('pdf-reports')
+          .download(filePath);
+
+        if (error) throw error;
+
+        if (data) {
+          const url = window.URL.createObjectURL(data);
+          const link = document.createElement('a');
+          link.href = url;
+          // Define o nome do arquivo para download
+          link.setAttribute('download', `${service.id.substring(0, 8)}-${vehicleDetail.plate}.pdf`);
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(url);
+          toast.success('Download iniciado!');
+        } else {
+          throw new Error('Nenhum dado de arquivo retornado.');
+        }
+
+      } catch (error) {
+        console.error('Erro ao baixar PDF:', error);
+        toast.error('Erro ao baixar PDF. Tente gerar novamente.');
+      } finally {
+        setPdfLoadingId(null);
+      }
       return;
     }
     
+    // Se o PDF não existe, gera e faz upload
     setPdfLoadingId(service.id);
 
     try {
@@ -166,13 +203,17 @@ export default function ServicesTab() {
         throw new Error(pdfResult.error || 'Falha ao gerar PDF.');
       }
       
-      toast.success('PDF gerado e salvo com sucesso!');
+      toast.success('PDF gerado e salvo com sucesso! Iniciando download...');
       
       // 3. Recarregar dados para atualizar a URL do PDF na lista
-      loadData(); 
+      await loadData(); 
       
-      // 4. Abrir o PDF recém-gerado
-      window.open(pdfResult.pdfUrl, '_blank');
+      // 4. Tenta forçar o download do PDF recém-gerado (recursivo, mas seguro)
+      const updatedService = services.find(s => s.id === service.id) || service;
+      if (updatedService.pdf_url) {
+          // Chama a si mesma para executar a lógica de download
+          await handleGeneratePDF(updatedService);
+      }
 
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
@@ -289,6 +330,7 @@ export default function ServicesTab() {
           const clientDetail = service.client?.[0];
           const vehicleDetail = service.vehicle?.[0];
           const employeeDetail = service.employee?.[0];
+          const pdfAvailable = !!service.pdf_url;
 
           return (
             <Card key={service.id} className="bg-[#1a1a1a] border-[#2a2a2a]">
@@ -317,7 +359,7 @@ export default function ServicesTab() {
                       ) : (
                         <Download className="w-3 h-3 mr-1" />
                       )}
-                      {service.pdf_url ? 'Ver PDF' : 'Gerar PDF'}
+                      {pdfAvailable ? 'Baixar PDF' : 'Gerar PDF'}
                     </Button>
                     <Button
                       size="sm"
