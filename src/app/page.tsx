@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
-import { initializeDatabase } from '@/lib/init-db';
+import { initializeDatabase, InitResult } from '@/lib/init-db';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function Home() {
   const router = useRouter();
@@ -13,12 +14,19 @@ export default function Home() {
 
   useEffect(() => {
     const initialize = async () => {
+      // Define a timeout promise (5 seconds) to prevent hanging indefinitely
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout na inicialização do DB')), 5000)
+      );
+
       try {
         // Inicializar banco de dados e criar usuário master se necessário
         setInitMessage('Verificando banco de dados...');
-        const dbResult = await initializeDatabase();
         
-        if (dbResult.success) {
+        // Race the DB initialization against a timeout
+        const dbResult = await Promise.race([initializeDatabase(), timeoutPromise]) as InitResult;
+        
+        if (dbResult && dbResult.success) {
           setInitMessage('Sistema pronto!');
         }
 
@@ -36,6 +44,7 @@ export default function Home() {
         }
       } catch (error) {
         console.error('Erro na inicialização:', error);
+        toast.error('Erro ao inicializar o sistema. Redirecionando para login.');
         router.push('/login');
       } finally {
         setLoading(false);
@@ -45,10 +54,15 @@ export default function Home() {
     initialize();
   }, [router]);
 
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a0a0a] gap-4">
-      <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-      <p className="text-gray-400 text-sm">{initMessage}</p>
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a0a0a] gap-4">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        <p className="text-gray-400 text-sm">{initMessage}</p>
+      </div>
+    );
+  }
+  
+  // Return null once loading is complete and redirection has been initiated
+  return null;
 }

@@ -21,10 +21,16 @@ export default function LoginPage() {
   useEffect(() => {
     // Inicializar banco de dados ao carregar a página de login
     const init = async () => {
+      // Define a timeout promise (5 seconds) to prevent hanging indefinitely
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout na inicialização do DB')), 5000)
+      );
+      
       try {
-        await initializeDatabase();
+        await Promise.race([initializeDatabase(), timeoutPromise]);
       } catch (error) {
         console.error('Erro ao inicializar banco:', error);
+        toast.error('Aviso: Falha na inicialização do banco de dados. Tente fazer login.');
       } finally {
         setInitializing(false);
       }

@@ -1,10 +1,17 @@
 import { supabase } from './supabase';
 import bcrypt from 'bcryptjs';
 
+export interface InitResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+  user?: any;
+}
+
 /**
  * Inicializa o banco de dados e cria o usuário administrador master
  */
-export async function initializeDatabase() {
+export async function initializeDatabase(): Promise<InitResult> {
   try {
     // Verificar se o usuário master já existe
     const { data: existingUser } = await supabase
