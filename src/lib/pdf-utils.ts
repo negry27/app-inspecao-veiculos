@@ -2,11 +2,16 @@ import { generateServicePDF } from './pdf-generator';
 import { supabase, Service, Client, Vehicle, ChecklistSection, ChecklistItem } from './supabase';
 import { format } from 'date-fns';
 
+interface Employee {
+  username: string;
+  cargo: string;
+}
+
 interface ServiceDetails {
   service: Service;
   client: Client;
   vehicle: Vehicle;
-  employee: any; // User type
+  employee: Employee;
   sections: ChecklistSection[];
   items: ChecklistItem[];
 }
@@ -24,19 +29,17 @@ export async function generateAndUploadPDF(details: ServiceDetails): Promise<{ s
       const sectionItems = items
         .filter(item => item.section_id === section.id)
         .map(item => {
-          // Acessa a resposta do checklist_data do serviço
-          const answer = service.checklist_data[section.id]?.[item.id];
+          const answer = service.checklist_data?.[section.id]?.[item.id] ?? null;
           let displayValue = 'Não Respondido';
-          
+
           if (answer) {
             displayValue = answer;
-            
-            // Formatação especial para datetime
+
             if (item.response_type === 'datetime') {
               try {
                 displayValue = format(new Date(answer), 'dd/MM/yyyy HH:mm');
-              } catch (e) {
-                displayValue = answer; // Fallback
+              } catch {
+                displayValue = answer;
               }
             }
           }
@@ -69,20 +72,22 @@ export async function generateAndUploadPDF(details: ServiceDetails): Promise<{ s
         km: vehicle.km_current,
       },
       checklist: checklistDataFormatted,
-      observations: service.observations,
+      observations: service.observations || '',
       photos: service.photos || [],
       date: format(new Date(service.created_at), 'dd/MM/yyyy HH:mm'),
     };
 
     // 2. Gerar o Blob do PDF
     const pdfBlob = await generateServicePDF(pdfData);
-    
+
+    if (!(pdfBlob instanceof Blob)) {
+      throw new Error('O PDF gerado não é um Blob válido.');
+    }
+
     // 3. Fazer upload para o Supabase Storage
-    // Usando o formato que você sugeriu, mas garantindo que o nome do arquivo seja único
     const fileName = `${service.id}-${format(new Date(), 'yyyyMMddHHmmss')}`;
-    
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('pdf-reports') // <-- Usando 'pdf-reports'
+      .from('pdf-reports')
       .upload(`reports/${fileName}.pdf`, pdfBlob, {
         cacheControl: '3600',
         upsert: true,
@@ -93,9 +98,13 @@ export async function generateAndUploadPDF(details: ServiceDetails): Promise<{ s
 
     // 4. Obter a URL pública
     const { data: publicUrlData } = supabase.storage
-      .from('pdf-reports') // <-- Usando 'pdf-reports'
+      .from('pdf-reports')
       .getPublicUrl(`reports/${fileName}.pdf`);
-      
+
+    if (!publicUrlData?.publicUrl) {
+      throw new Error('Não foi possível gerar URL pública do PDF.');
+    }
+
     const publicUrl = publicUrlData.publicUrl;
 
     // 5. Atualizar o registro do serviço no banco de dados
