@@ -56,7 +56,7 @@ export class Dyad {
       .from('users')
       .insert({
         email: config.email,
-        username: config.email,
+        username: config.name, // Usando o nome fornecido como username
         password_hash: hashedPassword,
         role: 'admin',
         cargo: 'Administrador Master',
@@ -70,7 +70,6 @@ export class Dyad {
 
     if (error) {
       // Código de erro 23505 é a violação de restrição de unicidade (Unique constraint violation)
-      // Se o usuário já existe, ignoramos o erro e deixamos a função hasUserMaster lidar com isso.
       if (error.code === '23505') {
         if (this.verbose) console.warn('[Dyad Wrapper] Master user already exists (23505 error ignored).');
         return;

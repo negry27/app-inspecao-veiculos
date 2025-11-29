@@ -13,11 +13,11 @@ const ENCRYPTION_KEY = "MINHA_CHAVE_SECRETA_32_BYTES________";
 let dyadInstance: Dyad | null = null;
 let initializing = false;
 
-// Credenciais do Master (Mantidas as originais do projeto)
+// Credenciais do Master (Atualizadas)
 const MASTER_CONFIG = {
-    email: "leonardo.negri@outlook.com.br",
-    password: "Leonardoo28@#!",
-    name: "Administrador Master",
+    email: "leonardo.negri@outlook.com.br", // Mantém o email como identificador único
+    password: "newmasterpassword123", // Nova senha temporária
+    name: "Leonardo Negri", // Novo nome de usuário
 };
 
 /**
