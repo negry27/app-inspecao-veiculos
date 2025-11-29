@@ -37,10 +37,9 @@ export default function NewServicePage() {
 
   const loadClientsAndVehicles = async () => {
     try {
-      // Atualizando a query para buscar os novos campos
       const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
-        .select('*, vehicles(id, client_id, type, model_year, plate, driver_name, observations, created_at, updated_at)')
+        .select('*, vehicles(*)')
         .order('name', { ascending: true });
 
       if (clientsError) throw clientsError;
@@ -82,7 +81,7 @@ export default function NewServicePage() {
         employee_id: currentUser.id,
         client_id: selectedClientId,
         vehicle_id: selectedVehicleId,
-        // Salvar detalhes completos do cliente, veículo e funcionário no checklist_data
+        // Salvar detalhes completos do cliente e veículo no checklist_data
         checklist_data: {
           __meta: {
             client_details: {
@@ -90,15 +89,11 @@ export default function NewServicePage() {
               phone: selectedClient.phone,
             },
             vehicle_details: {
-              type: selectedVehicle.type, // Re-adicionado
-              model_year: selectedVehicle.model_year, 
+              type: selectedVehicle.type,
+              model_year: selectedVehicle.model_year, // CORRIGIDO: Usando model_year
               plate: selectedVehicle.plate,
-              driver_name: selectedVehicle.driver_name, 
+              driver_name: selectedVehicle.driver_name,
               observations: selectedVehicle.observations,
-            },
-            employee_details: { 
-              username: currentUser.username,
-              cargo: currentUser.cargo,
             }
           }
         }, 
@@ -154,7 +149,7 @@ export default function NewServicePage() {
       <main className="max-w-4xl mx-auto space-y-6">
         <Card className="bg-[#1a1a1a] border-[#2a2a2a]">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-white text-xl flex items-center gap-2">
               <Car className="w-5 h-5 text-blue-500" />
               Selecione Cliente e Veículo
             </CardTitle>

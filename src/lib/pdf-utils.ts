@@ -18,10 +18,11 @@ interface PDFData {
     phone: string;
   };
   vehicle: {
-    type: string; // Re-adicionado
-    model_year: string; 
+    type: string;
+    model: string; 
     plate: string;
     driver_name?: string; 
+    km_current?: number; // Adicionado km_current
   };
   checklist: {
     section: string;
@@ -83,20 +84,31 @@ export async function generateAndUploadPDF(details: ServiceDetails): Promise<{ s
       };
     });
 
+    // Priorizar dados embutidos no __meta se existirem
+    const embeddedClient = service.checklist_data?.__meta?.client_details;
+    const embeddedVehicle = service.checklist_data?.__meta?.vehicle_details;
+    const embeddedEmployee = service.checklist_data?.__meta?.employee_details;
+    
+    const finalClient = embeddedClient || client;
+    const finalVehicle = embeddedVehicle || vehicle;
+    const finalEmployee = embeddedEmployee || employee;
+
+
     const pdfData: PDFData = {
       employee: {
-        name: employee.username || 'N/A',
-        cargo: employee.cargo || 'N/A',
+        name: finalEmployee.username || 'N/A',
+        cargo: finalEmployee.cargo || 'N/A',
       },
       client: {
-        name: client.name,
-        phone: client.phone,
+        name: finalClient.name,
+        phone: finalClient.phone,
       },
       vehicle: {
-        type: vehicle.type, // Re-adicionado
-        model_year: vehicle.model_year, 
-        plate: vehicle.plate,
-        driver_name: vehicle.driver_name, 
+        type: finalVehicle.type,
+        model: finalVehicle.model, 
+        plate: finalVehicle.plate,
+        driver_name: finalVehicle.driver_name, 
+        km_current: finalVehicle.km_current,
       },
       checklist: checklistDataFormatted,
       observations: service.observations || '',
@@ -151,14 +163,18 @@ export async function generateAndUploadPDF(details: ServiceDetails): Promise<{ s
     yPosition += 7;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Tipo: ${pdfData.vehicle.type}`, 20, yPosition); // Re-adicionado
+    doc.text(`Tipo: ${pdfData.vehicle.type}`, 20, yPosition);
     yPosition += 5;
-    doc.text(`Modelo/Ano: ${pdfData.vehicle.model_year}`, 20, yPosition); 
+    doc.text(`Modelo: ${pdfData.vehicle.model}`, 20, yPosition); 
     yPosition += 5;
     doc.text(`Placa: ${pdfData.vehicle.plate}`, 20, yPosition);
     yPosition += 5;
     if (pdfData.vehicle.driver_name) {
         doc.text(`Motorista: ${pdfData.vehicle.driver_name}`, 20, yPosition); 
+        yPosition += 5;
+    }
+    if (pdfData.vehicle.km_current) {
+        doc.text(`KM Atual: ${pdfData.vehicle.km_current}`, 20, yPosition); 
         yPosition += 5;
     }
     yPosition += 10; // Espaçamento após informações do veículo

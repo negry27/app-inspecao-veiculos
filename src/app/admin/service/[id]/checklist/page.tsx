@@ -109,9 +109,20 @@ export default function AdminServiceChecklistPage() {
       const loadedSections = sectionsData as ChecklistSection[] || [];
       const loadedItems = itemsData as ChecklistItem[] || [];
       
-      // 3. Preenchimento Automático de Dados (apenas se não estiver preenchido)
+      // 3. Preenchimento Automático de Dados
       const autoFilledData: ChecklistData = {};
       const now = formatDateTimeLocal(new Date());
+      
+      // Priorizar dados embutidos no __meta
+      const embeddedClient = loadedService.checklist_data?.__meta?.client_details;
+      const embeddedVehicle = loadedService.checklist_data?.__meta?.vehicle_details;
+      const embeddedEmployee = loadedService.checklist_data?.__meta?.employee_details;
+
+      // Usar dados embutidos se existirem, caso contrário, usar dados de relacionamento
+      const finalClient = embeddedClient || loadedService.client;
+      const finalVehicle = embeddedVehicle || loadedService.vehicle;
+      const finalEmployee = embeddedEmployee || loadedService.employee;
+
 
       loadedSections.forEach(section => {
         loadedItems.filter(item => item.section_id === section.id).forEach(item => {
@@ -120,18 +131,18 @@ export default function AdminServiceChecklistPage() {
           if (item.response_type === 'autofill' && !autoValue) {
             const itemTitleLower = item.title.toLowerCase();
             
-            if (itemTitleLower.includes('tipo') && loadedService.vehicle?.type) {
-              autoValue = loadedService.vehicle.type;
-            } else if (itemTitleLower.includes('modelo') && loadedService.vehicle?.model_year) {
-              autoValue = loadedService.vehicle.model_year;
-            } else if (itemTitleLower.includes('placa') && loadedService.vehicle?.plate) {
-              autoValue = loadedService.vehicle.plate;
-            } else if (itemTitleLower.includes('motorista') && loadedService.vehicle?.driver_name) {
-              autoValue = loadedService.vehicle.driver_name;
-            } else if (itemTitleLower.includes('cliente') && loadedService.client?.name) {
-              autoValue = loadedService.client.name;
-            } else if (itemTitleLower.includes('funcionário') && loadedService.employee?.username) {
-              autoValue = loadedService.employee.username;
+            if (itemTitleLower.includes('tipo') && finalVehicle?.type) {
+              autoValue = finalVehicle.type;
+            } else if (itemTitleLower.includes('modelo') && finalVehicle?.model_year) {
+              autoValue = finalVehicle.model_year;
+            } else if (itemTitleLower.includes('placa') && finalVehicle?.plate) {
+              autoValue = finalVehicle.plate;
+            } else if (itemTitleLower.includes('motorista') && finalVehicle?.driver_name) {
+              autoValue = finalVehicle.driver_name;
+            } else if (itemTitleLower.includes('cliente') && finalClient?.name) {
+              autoValue = finalClient.name;
+            } else if (itemTitleLower.includes('funcionário') && finalEmployee?.username) {
+              autoValue = finalEmployee.username;
             }
           } else if (item.response_type === 'datetime' && item.title.toLowerCase().includes('data e hora da inspeção') && !autoValue) {
             // Preenche automaticamente com a hora de início da inspeção
@@ -227,9 +238,7 @@ export default function AdminServiceChecklistPage() {
     console.log('Iniciando submissão do checklist (Admin)...');
 
     try {
-      // 1. Não há mais atualização de KM do veículo aqui, pois o campo foi removido.
-
-      // 2. Atualizar o serviço com checklist e observações
+      // 1. Atualizar o serviço com checklist e observações
       const updatedServiceData = {
           checklist_data: checklistData,
           observations: observations,
@@ -247,16 +256,22 @@ export default function AdminServiceChecklistPage() {
 
       if (serviceUpdateError) throw new Error(`Erro ao atualizar serviço: ${serviceUpdateError.message}`);
       
-      // 3. Gerar e fazer upload do PDF
+      // 2. Gerar e fazer upload do PDF
       // Usamos o funcionário original do serviço para o relatório, não o admin que está editando
       const originalEmployee = service.employee; 
       
       console.log('Iniciando regeneração e upload do PDF...');
+      
+      // Priorizar dados embutidos para o PDF
+      const finalClient = service.checklist_data?.__meta?.client_details || client;
+      const finalVehicle = service.checklist_data?.__meta?.vehicle_details || vehicle;
+      const finalEmployee = service.checklist_data?.__meta?.employee_details || originalEmployee;
+
       const pdfResult = await generateAndUploadPDF({
           service: { ...service, ...updatedServiceData, pdf_url: updatedService.pdf_url },
-          client,
-          vehicle,
-          employee: originalEmployee,
+          client: finalClient,
+          vehicle: finalVehicle,
+          employee: finalEmployee,
           sections,
           items
       });
@@ -266,7 +281,7 @@ export default function AdminServiceChecklistPage() {
           toast.error(`Checklist salvo, mas falha ao gerar PDF: ${pdfResult.error}`);
       } else {
           console.log('PDF regenerado e URL salva:', pdfResult.pdfUrl);
-          toast.success('Inspeção atualizada, salva e PDF regenerado com sucesso!');
+          toast.success('Inspeção atualizada, salva e PDF regenerada com sucesso!');
       }
 
       router.push('/admin'); // Redirecionar para o painel do admin
