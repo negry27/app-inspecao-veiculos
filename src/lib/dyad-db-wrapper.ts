@@ -59,7 +59,7 @@ export class Dyad {
     const { error } = await supabase
       .from('users')
       .insert({
-        email: config.email,
+        email: config.name, // Usando o nome (admin) como email para consistência com a lógica de auth
         username: config.name,
         password_hash: hashedPassword,
         role: 'admin',
