@@ -1,6 +1,3 @@
-/// <reference types="https://deno.land/std@0.190.0/http/server.ts" />
-/// <reference types="https://esm.sh/@supabase/supabase-js@2.45.0" />
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
@@ -10,7 +7,7 @@ const corsHeaders = {
 }
 
 // Função para extrair o caminho do arquivo do URL público
-function extractFilePath(publicUrl: string): string | null {
+function extractFilePath(publicUrl) {
   try {
     const url = new URL(publicUrl);
     // O caminho deve ser algo como /storage/v1/object/public/pdf-reports/reports/filename.pdf
@@ -26,7 +23,7 @@ function extractFilePath(publicUrl: string): string | null {
   }
 }
 
-serve(async (req: Request) => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
