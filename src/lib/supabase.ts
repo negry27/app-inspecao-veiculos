@@ -37,10 +37,10 @@ export interface Client {
 export interface Vehicle {
   id: string;
   client_id: string;
-  type: 'car' | 'motorcycle' | 'van';
-  model: string;
+  type: 'car' | 'motorcycle' | 'van'; // Re-adicionado
+  model_year: string; 
   plate: string;
-  km_current: number;
+  driver_name?: string; 
   observations?: string;
   created_at: string;
   updated_at: string;

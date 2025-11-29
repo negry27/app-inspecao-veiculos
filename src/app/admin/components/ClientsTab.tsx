@@ -65,10 +65,10 @@ export default function ClientsTab() {
   
   const [clientForm, setClientForm] = useState({ name: '', phone: '' });
   const [vehicleForm, setVehicleForm] = useState({
-    type: 'car' as 'car' | 'motorcycle' | 'van',
-    model: '',
+    type: 'car' as 'car' | 'motorcycle' | 'van', // Re-adicionado
+    model_year: '', 
     plate: '',
-    km_current: 0,
+    driver_name: '', 
     observations: ''
   });
 
@@ -152,15 +152,27 @@ export default function ClientsTab() {
   const handleVehicleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!vehicleForm.model_year || !vehicleForm.plate) {
+        toast.error('Modelo/Ano e Placa são obrigatórios.');
+        return;
+    }
+
     try {
       const { error } = await supabase
         .from('vehicles')
-        .insert([{ ...vehicleForm, client_id: selectedClientId }]);
+        .insert([{ 
+            client_id: selectedClientId,
+            type: vehicleForm.type, // Re-adicionado
+            model_year: vehicleForm.model_year,
+            plate: vehicleForm.plate,
+            driver_name: vehicleForm.driver_name || null,
+            observations: vehicleForm.observations || null,
+        }]);
 
       if (error) throw error;
       toast.success('Veículo adicionado!');
       setVehicleDialogOpen(false);
-      setVehicleForm({ type: 'car', model: '', plate: '', km_current: 0, observations: '' });
+      setVehicleForm({ type: 'car', model_year: '', plate: '', driver_name: '', observations: '' });
       loadClients();
     } catch (error: any) {
       toast.error(error.message || 'Erro ao adicionar veículo');
@@ -310,8 +322,8 @@ export default function ClientsTab() {
                           <div className="flex items-center gap-2">
                             <CarIcon className="w-4 h-4 text-blue-500" />
                             <div className="text-xs">
-                              <p className="text-white font-medium">{vehicle.model}</p>
-                              <p className="text-gray-400">{vehicle.plate} - {vehicle.type}</p>
+                              <p className="text-white font-medium">{vehicle.model_year} ({vehicle.type})</p>
+                              <p className="text-gray-400">{vehicle.plate} - Motorista: {vehicle.driver_name || 'N/A'}</p>
                             </div>
                           </div>
                           <Button
@@ -346,10 +358,9 @@ export default function ClientsTab() {
               <Label>Tipo</Label>
               <Select value={vehicleForm.type} onValueChange={(value: any) => setVehicleForm({ ...vehicleForm, type: value })}>
                 <SelectTrigger className="bg-[#0a0a0a] border-[#2a2a2a] text-white">
-                  <SelectValue />
+                  <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent className="bg-[#1a1a1a] border-[#2a2a2a]">
-                  {/* Adicionando text-white ao SelectItem */}
                   <SelectItem value="car" className="text-white">Carro</SelectItem>
                   <SelectItem value="motorcycle" className="text-white">Moto</SelectItem>
                   <SelectItem value="van" className="text-white">Van</SelectItem>
@@ -357,10 +368,10 @@ export default function ClientsTab() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Modelo</Label>
+              <Label>Modelo/Ano</Label>
               <Input
-                value={vehicleForm.model}
-                onChange={(e) => setVehicleForm({ ...vehicleForm, model: e.target.value })}
+                value={vehicleForm.model_year}
+                onChange={(e) => setVehicleForm({ ...vehicleForm, model_year: e.target.value })}
                 required
                 className="bg-[#0a0a0a] border-[#2a2a2a]"
               />
@@ -375,17 +386,15 @@ export default function ClientsTab() {
               />
             </div>
             <div className="space-y-2">
-              <Label>KM Atual</Label>
+              <Label>Motorista (Opcional)</Label>
               <Input
-                type="number"
-                value={vehicleForm.km_current}
-                onChange={(e) => setVehicleForm({ ...vehicleForm, km_current: parseInt(e.target.value) })}
-                required
+                value={vehicleForm.driver_name}
+                onChange={(e) => setVehicleForm({ ...vehicleForm, driver_name: e.target.value })}
                 className="bg-[#0a0a0a] border-[#2a2a2a]"
               />
             </div>
             <div className="space-y-2">
-              <Label>Observações</Label>
+              <Label>Observações (Opcional)</Label>
               <Textarea
                 value={vehicleForm.observations}
                 onChange={(e) => setVehicleForm({ ...vehicleForm, observations: e.target.value })}

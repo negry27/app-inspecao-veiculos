@@ -37,9 +37,10 @@ export default function NewServicePage() {
 
   const loadClientsAndVehicles = async () => {
     try {
+      // Atualizando a query para buscar os novos campos
       const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
-        .select('*, vehicles(*)')
+        .select('*, vehicles(id, client_id, type, model_year, plate, driver_name, observations, created_at, updated_at)')
         .order('name', { ascending: true });
 
       if (clientsError) throw clientsError;
@@ -89,13 +90,13 @@ export default function NewServicePage() {
               phone: selectedClient.phone,
             },
             vehicle_details: {
-              type: selectedVehicle.type,
-              model: selectedVehicle.model,
+              type: selectedVehicle.type, // Re-adicionado
+              model_year: selectedVehicle.model_year, 
               plate: selectedVehicle.plate,
-              km_current: selectedVehicle.km_current,
+              driver_name: selectedVehicle.driver_name, 
               observations: selectedVehicle.observations,
             },
-            employee_details: { // Adicionando detalhes do funcionário
+            employee_details: { 
               username: currentUser.username,
               cargo: currentUser.cargo,
             }
@@ -196,7 +197,7 @@ export default function NewServicePage() {
                   <SelectContent className="bg-[#1a1a1a] border-[#2a2a2a]">
                     {availableVehicles.map((vehicle) => (
                       <SelectItem key={vehicle.id} value={vehicle.id}>
-                        {vehicle.model} - {vehicle.plate} ({vehicle.type})
+                        {vehicle.model_year} - {vehicle.plate} ({vehicle.type})
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -122,12 +122,12 @@ export default function AdminServiceChecklistPage() {
             
             if (itemTitleLower.includes('tipo') && loadedService.vehicle?.type) {
               autoValue = loadedService.vehicle.type;
-            } else if (itemTitleLower.includes('modelo') && loadedService.vehicle?.model) {
-              autoValue = loadedService.vehicle.model;
+            } else if (itemTitleLower.includes('modelo') && loadedService.vehicle?.model_year) {
+              autoValue = loadedService.vehicle.model_year;
             } else if (itemTitleLower.includes('placa') && loadedService.vehicle?.plate) {
               autoValue = loadedService.vehicle.plate;
-            } else if (itemTitleLower.includes('km atual') && loadedService.vehicle?.km_current !== undefined) {
-              autoValue = String(loadedService.vehicle.km_current);
+            } else if (itemTitleLower.includes('motorista') && loadedService.vehicle?.driver_name) {
+              autoValue = loadedService.vehicle.driver_name;
             } else if (itemTitleLower.includes('cliente') && loadedService.client?.name) {
               autoValue = loadedService.client.name;
             } else if (itemTitleLower.includes('funcionário') && loadedService.employee?.username) {
@@ -187,7 +187,6 @@ export default function AdminServiceChecklistPage() {
     }
 
     // --- START Validation and Data Collection ---
-    let kmItemAnswer: string | undefined;
     let allOptionsAnswered = true;
     let totalItems = 0;
     let answeredItems = 0;
@@ -202,14 +201,7 @@ export default function AdminServiceChecklistPage() {
             answeredItems++;
         }
 
-        const itemTitleLower = item.title.toLowerCase();
-
-        // 1. Capturar KM Atual
-        if (itemTitleLower.includes('km atual') || itemTitleLower.includes('quilometragem')) {
-            kmItemAnswer = answer;
-        }
-
-        // 2. Validar se todas as opções foram respondidas (apenas para tipo 'options')
+        // 1. Validar se todas as opções foram respondidas (apenas para tipo 'options')
         if (item.response_type === 'options' && !answer) {
           allOptionsAnswered = false;
         }
@@ -226,12 +218,6 @@ export default function AdminServiceChecklistPage() {
         // Admin pode prosseguir, mas é bom avisar
     }
     
-    // Validação do KM (se houver um campo de KM no checklist)
-    if (kmItemAnswer && (isNaN(Number(kmItemAnswer)) || Number(kmItemAnswer) <= 0)) {
-        toast.error('Por favor, insira um valor válido para o KM atual no checklist.');
-        return;
-    }
-
     if (!allOptionsAnswered) {
       toast.warning(`Alguns itens de múltipla escolha não foram respondidos.`);
     }
@@ -241,20 +227,7 @@ export default function AdminServiceChecklistPage() {
     console.log('Iniciando submissão do checklist (Admin)...');
 
     try {
-      // 1. Atualizar o KM atual do veículo APENAS se o valor foi preenchido no checklist
-      if (kmItemAnswer && service.vehicle_id) {
-        console.log(`Atualizando KM do veículo ${service.vehicle_id} para: ${kmItemAnswer}`);
-        const { error: vehicleUpdateError } = await supabase
-          .from('vehicles')
-          .update({ km_current: Number(kmItemAnswer) })
-          .eq('id', service.vehicle_id);
-
-        if (vehicleUpdateError) throw new Error(`Erro ao atualizar KM do veículo: ${vehicleUpdateError.message}`);
-        
-        // Atualiza o objeto vehicle localmente para o PDF
-        vehicle.km_current = Number(kmItemAnswer);
-        console.log('KM do veículo atualizado com sucesso.');
-      }
+      // 1. Não há mais atualização de KM do veículo aqui, pois o campo foi removido.
 
       // 2. Atualizar o serviço com checklist e observações
       const updatedServiceData = {
@@ -379,7 +352,7 @@ export default function AdminServiceChecklistPage() {
                 </div>
                 <div className="flex items-center gap-2">
                     <Car className="w-4 h-4 text-gray-500" />
-                    <p className="text-gray-400">Veículo: <span className="text-white font-medium">{vehicle?.model} ({vehicle?.plate})</span></p>
+                    <p className="text-gray-400">Veículo: <span className="text-white font-medium">{vehicle?.model_year} ({vehicle?.plate})</span></p>
                 </div>
                 <div className="flex items-center gap-2">
                     <UserIcon className="w-4 h-4 text-gray-500" />
@@ -410,7 +383,6 @@ export default function AdminServiceChecklistPage() {
                   const itemTitleLower = item.title.toLowerCase();
                   
                   // Admin pode editar todos os campos
-                  const isKmField = itemTitleLower.includes('km atual') || itemTitleLower.includes('quilometragem');
                   const isDisabled = false; 
 
                   return (
@@ -475,7 +447,7 @@ export default function AdminServiceChecklistPage() {
                         />
                       ) : (
                         <Input
-                          type={isKmField ? 'number' : 'text'}
+                          type={'text'}
                           placeholder={'Insira a observação ou valor...'}
                           value={currentAnswer}
                           onChange={(e) => handleAnswerChange(section.id, item.id, e.target.value)}

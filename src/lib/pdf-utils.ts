@@ -1,10 +1,35 @@
-import { generateServicePDF } from './pdf-generator';
-import { supabase, Service, Client, Vehicle, ChecklistSection, ChecklistItem } from './supabase';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { Service, Client, Vehicle, ChecklistSection, ChecklistItem, supabase } from './supabase'; // Importando tipos e supabase
 import { format } from 'date-fns';
 
 interface Employee {
   username: string;
   cargo?: string; // Corrigido para ser opcional
+}
+
+interface PDFData {
+  employee: {
+    name: string;
+    cargo: string;
+  };
+  client: {
+    name: string;
+    phone: string;
+  };
+  vehicle: {
+    type: string; // Re-adicionado
+    model_year: string; 
+    plate: string;
+    driver_name?: string; 
+  };
+  checklist: {
+    section: string;
+    items: { title: string; value: string }[];
+  }[];
+  observations?: string;
+  photos: string[];
+  date: string;
 }
 
 interface ServiceDetails {
@@ -58,7 +83,7 @@ export async function generateAndUploadPDF(details: ServiceDetails): Promise<{ s
       };
     });
 
-    const pdfData = {
+    const pdfData: PDFData = {
       employee: {
         name: employee.username || 'N/A',
         cargo: employee.cargo || 'N/A',
@@ -68,10 +93,10 @@ export async function generateAndUploadPDF(details: ServiceDetails): Promise<{ s
         phone: client.phone,
       },
       vehicle: {
-        type: vehicle.type,
-        model: vehicle.model,
+        type: vehicle.type, // Re-adicionado
+        model_year: vehicle.model_year, 
         plate: vehicle.plate,
-        km: vehicle.km_current,
+        driver_name: vehicle.driver_name, 
       },
       checklist: checklistDataFormatted,
       observations: service.observations || '',
@@ -80,7 +105,129 @@ export async function generateAndUploadPDF(details: ServiceDetails): Promise<{ s
     };
 
     // 2. Gerar o Blob do PDF
-    const pdfBlob = await generateServicePDF(pdfData);
+    const doc = new jsPDF();
+    let yPosition = 20;
+
+    // Título
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Relatório de Inspeção e Lavagem', 105, yPosition, { align: 'center' });
+    yPosition += 15;
+
+    // Data
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Data: ${pdfData.date}`, 20, yPosition);
+    yPosition += 10;
+
+    // Informações do Funcionário
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Funcionário', 20, yPosition);
+    yPosition += 7;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Nome: ${pdfData.employee.name}`, 20, yPosition);
+    yPosition += 5;
+    doc.text(`Cargo: ${pdfData.employee.cargo}`, 20, yPosition);
+    yPosition += 10;
+
+    // Informações do Cliente
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Cliente', 20, yPosition);
+    yPosition += 7;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Nome: ${pdfData.client.name}`, 20, yPosition);
+    yPosition += 5;
+    doc.text(`Telefone: ${pdfData.client.phone}`, 20, yPosition);
+    yPosition += 10;
+
+    // Informações do Veículo
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Veículo', 20, yPosition);
+    yPosition += 7;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Tipo: ${pdfData.vehicle.type}`, 20, yPosition); // Re-adicionado
+    yPosition += 5;
+    doc.text(`Modelo/Ano: ${pdfData.vehicle.model_year}`, 20, yPosition); 
+    yPosition += 5;
+    doc.text(`Placa: ${pdfData.vehicle.plate}`, 20, yPosition);
+    yPosition += 5;
+    if (pdfData.vehicle.driver_name) {
+        doc.text(`Motorista: ${pdfData.vehicle.driver_name}`, 20, yPosition); 
+        yPosition += 5;
+    }
+    yPosition += 10; // Espaçamento após informações do veículo
+
+    // Checklist
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Checklist de Inspeção', 20, yPosition);
+    yPosition += 10;
+
+    pdfData.checklist.forEach((section) => {
+      // Verificar se precisa de nova página
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text(section.section, 20, yPosition);
+      yPosition += 7;
+
+      const tableData = section.items.map(item => [item.title, item.value]);
+
+      autoTable(doc, {
+        startY: yPosition,
+        head: [['Item', 'Status']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [41, 128, 185] },
+        margin: { left: 20, right: 20 },
+        styles: { fontSize: 9 },
+      });
+
+      yPosition = (doc as any).lastAutoTable.finalY + 10;
+    });
+
+    // Observações
+    if (pdfData.observations) {
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Observações', 20, yPosition);
+      yPosition += 7;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const splitText = doc.splitTextToSize(pdfData.observations, 170);
+      doc.text(splitText, 20, yPosition);
+      yPosition += splitText.length * 5 + 10;
+    }
+
+    // Fotos
+    if (pdfData.photos.length > 0) {
+      doc.addPage();
+      yPosition = 20;
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Fotos Anexadas', 20, yPosition);
+      yPosition += 10;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Total de fotos: ${pdfData.photos.length}`, 20, yPosition);
+    }
+
+    const pdfBlob = doc.output('blob');
 
     if (!(pdfBlob instanceof Blob)) {
       throw new Error('O PDF gerado não é um Blob válido.');

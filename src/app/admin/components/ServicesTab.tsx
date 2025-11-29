@@ -30,29 +30,19 @@ export default function ServicesTab() {
   const [loading, setLoading] = useState(true);
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
   
-  // Removendo estados de formulário não utilizados
-  // const [dialogOpen, setDialogOpen] = useState(false);
-  // const [formData, setFormData] = useState({
-  //   client_id: '',
-  //   vehicle_id: '',
-  //   employee_id: '',
-  //   observations: '',
-  //   photos: [] as string[]
-  // });
-
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
     try {
-      // Buscar serviços com dados aninhados
+      // Buscar serviços com dados aninhados (Atualizando a query de vehicle)
       const { data: servicesData, error: servicesError } = await supabase
         .from('services')
         .select(`
           *,
           client:client_id(name, phone),
-          vehicle:vehicle_id(model, plate, type, km_current, observations),
+          vehicle:vehicle_id(model_year, plate, type, driver_name, observations),
           employee:employee_id(username, cargo)
         `)
         .order('created_at', { ascending: false });
@@ -80,35 +70,6 @@ export default function ServicesTab() {
       setLoading(false);
     }
   };
-
-  // Removendo handleSubmit
-  // const handleSubmit = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-    
-  //   if (!formData.client_id || !formData.vehicle_id || !formData.employee_id) {
-  //       toast.error('Por favor, selecione Cliente, Veículo e Funcionário.');
-  //       return;
-  //   }
-
-  //   try {
-  //     const { error } = await supabase
-  //       .from('services')
-  //       .insert([{
-  //         ...formData,
-  //         checklist_data: {}, // Inicialmente vazio
-  //         created_at: new Date().toISOString()
-  //       }]);
-
-  //     if (error) throw error;
-      
-  //     toast.success('Serviço criado com sucesso!');
-  //     setDialogOpen(false);
-  //     setFormData({ client_id: '', vehicle_id: '', employee_id: '', observations: '', photos: [] });
-  //     loadData();
-  //   } catch (error: any) {
-  //     toast.error(error.message || 'Erro ao criar serviço');
-  //   }
-  // };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este serviço?')) return;
@@ -222,10 +183,10 @@ export default function ServicesTab() {
       const vehicleForPdf: Vehicle = {
         id: service.vehicle_id,
         client_id: service.client_id,
-        type: finalVehicle.type,
-        model: finalVehicle.model,
+        type: finalVehicle.type, // Re-adicionado
+        model_year: finalVehicle.model_year,
         plate: finalVehicle.plate,
-        km_current: finalVehicle.km_current,
+        driver_name: finalVehicle.driver_name,
         observations: finalVehicle.observations,
         created_at: '', // Placeholder
         updated_at: '', // Placeholder
@@ -269,7 +230,7 @@ export default function ServicesTab() {
       // Busca o serviço atualizado para garantir que a URL do PDF esteja presente
       const { data: updatedServiceData } = await supabase
         .from('services')
-        .select(`*, client:client_id(name, phone), vehicle:vehicle_id(model, plate, type, km_current, observations), employee:employee_id(username, cargo)`)
+        .select(`*, client:client_id(name, phone), vehicle:vehicle_id(model_year, plate, type, driver_name, observations), employee:employee_id(username, cargo)`)
         .eq('id', service.id)
         .single();
 
@@ -373,7 +334,7 @@ export default function ServicesTab() {
                     <Car className="w-4 h-4 text-gray-500" />
                     <div>
                       <p className="text-gray-400">Veículo</p>
-                      <p className="text-white font-medium">{vehicleDetail?.model || 'N/A'} ({vehicleDetail?.plate || 'N/A'})</p>
+                      <p className="text-white font-medium">{vehicleDetail?.model_year || 'N/A'} ({vehicleDetail?.plate || 'N/A'})</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
