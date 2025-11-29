@@ -50,9 +50,9 @@ export default function ServicesTab() {
         .from('services')
         .select(`
           *,
-          client:client_id(*),
-          vehicle:vehicle_id(*),
-          employee:employee_id(*)
+          client:client_id(name, phone),
+          vehicle:vehicle_id(model, plate, type),
+          employee:employee_id(username, cargo)
         `)
         .order('created_at', { ascending: false });
 
@@ -268,6 +268,7 @@ export default function ServicesTab() {
 
       <div className="grid gap-4">
         {services.map((service) => {
+          // Acessando o primeiro elemento do array de relacionamento
           const clientDetail = service.client?.[0];
           const vehicleDetail = service.vehicle?.[0];
           const employeeDetail = service.employee?.[0];
