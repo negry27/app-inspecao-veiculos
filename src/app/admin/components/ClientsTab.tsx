@@ -54,25 +54,6 @@ const formatPhoneNumberLocal = (value: string) => {
   return numericValue;
 };
 
-// Função de formatação de placa (mantida aqui para o onChange)
-const formatPlateInput = (value: string) => {
-  // Remove caracteres não alfanuméricos e converte para maiúsculas
-  const cleanValue = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-  
-  // Limita a 7 caracteres (padrão Mercosul ou antigo)
-  const rawPlate = cleanValue.substring(0, 7);
-  
-  if (rawPlate.length > 3) {
-    // Aplica o hífen após o terceiro caractere
-    return rawPlate.replace(
-      /^([a-zA-Z0-9]{3})([a-zA-Z0-9]*)$/,
-      '$1-$2'
-    );
-  }
-  
-  return rawPlate;
-};
-
 
 export default function ClientsTab() {
   const [clients, setClients] = useState<any[]>([]);
@@ -171,25 +152,25 @@ export default function ClientsTab() {
   };
 
   const handlePlateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formattedValue = e.target.value.toUpperCase(); // Simplificado para apenas maiúsculas
-    setVehicleForm({ ...vehicleForm, plate: formattedValue });
+    // Apenas converte para maiúsculas
+    setVehicleForm({ ...vehicleForm, plate: e.target.value.toUpperCase() });
   };
 
   const handleVehicleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const modelYearCombined = `${vehicleForm.model.trim()}/${vehicleForm.year.trim()}`;
-    // A placa é salva como o usuário digitou, mas em maiúsculas.
-    const rawPlate = vehicleForm.plate.trim().toUpperCase();
+    
+    // Remove caracteres não alfanuméricos para salvar no banco (apenas 7 caracteres)
+    const rawPlate = vehicleForm.plate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
     if (!vehicleForm.model || !vehicleForm.year || !rawPlate) {
         toast.error('Modelo, Ano e Placa são obrigatórios.');
         return;
     }
     
-    // Validação básica de comprimento (7 caracteres é o padrão, mas permitimos o hífen)
-    const cleanPlate = rawPlate.replace(/[^a-zA-Z0-9]/g, '');
-    if (cleanPlate.length < 7) {
+    // Validação básica de comprimento (7 caracteres é o padrão)
+    if (rawPlate.length < 7) {
         toast.error('A placa deve ter no mínimo 7 caracteres alfanuméricos.');
         return;
     }
@@ -201,7 +182,7 @@ export default function ClientsTab() {
             client_id: selectedClientId,
             type: vehicleForm.type,
             model_year: modelYearCombined, // Combinando Modelo/Ano
-            plate: rawPlate, // Salvando como digitado (pode conter hífen)
+            plate: rawPlate, // Salvando apenas os 7 caracteres alfanuméricos
             driver_name: vehicleForm.driver_name || null,
             observations: vehicleForm.observations || null,
         }]);
