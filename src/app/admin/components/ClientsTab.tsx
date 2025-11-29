@@ -61,11 +61,23 @@ export default function ClientsTab() {
   const handleClientSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Garantir que o nome não está vazio
+    if (!clientForm.name.trim()) {
+        toast.error('O nome do cliente é obrigatório.');
+        return;
+    }
+
     try {
+      // Limpar o telefone se for uma string vazia para evitar problemas de tipagem no banco (embora o Supabase aceite)
+      const clientData = {
+        name: clientForm.name.trim(),
+        phone: clientForm.phone.trim() || null, // Define como null se estiver vazio
+      };
+
       if (editingClient) {
         const { error } = await supabase
           .from('clients')
-          .update({ ...clientForm, updated_at: new Date().toISOString() })
+          .update({ ...clientData, updated_at: new Date().toISOString() })
           .eq('id', editingClient.id);
 
         if (error) throw error;
@@ -73,7 +85,7 @@ export default function ClientsTab() {
       } else {
         const { error } = await supabase
           .from('clients')
-          .insert([clientForm]);
+          .insert([clientData]);
 
         if (error) throw error;
         toast.success('Cliente criado!');
@@ -169,11 +181,11 @@ export default function ClientsTab() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Telefone</Label>
+                <Label>Telefone (Opcional)</Label>
                 <Input
                   value={clientForm.phone}
                   onChange={(e) => setClientForm({ ...clientForm, phone: e.target.value })}
-                  required
+                  // Removido o atributo required
                   className="bg-[#0a0a0a] border-[#2a2a2a]"
                 />
               </div>
@@ -200,7 +212,7 @@ export default function ClientsTab() {
                       variant="outline"
                       onClick={() => {
                         setEditingClient(client);
-                        setClientForm({ name: client.name, phone: client.phone });
+                        setClientForm({ name: client.name, phone: client.phone || '' });
                         setDialogOpen(true);
                       }}
                       className="bg-blue-500/10 border-blue-500/20 text-blue-500"
@@ -219,7 +231,7 @@ export default function ClientsTab() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p className="text-sm text-gray-400">Telefone: {client.phone}</p>
+                <p className="text-sm text-gray-400">Telefone: {client.phone || 'N/A'}</p>
                 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
