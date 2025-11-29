@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 
 interface Employee {
   username: string;
-  cargo: string;
+  cargo?: string; // Corrigido para ser opcional
 }
 
 interface ServiceDetails {
@@ -29,17 +29,19 @@ export async function generateAndUploadPDF(details: ServiceDetails): Promise<{ s
       const sectionItems = items
         .filter(item => item.section_id === section.id)
         .map(item => {
-          const answer = service.checklist_data?.[section.id]?.[item.id] ?? null;
+          // Acessa a resposta do checklist_data do serviço
+          const answer = service.checklist_data[section.id]?.[item.id];
           let displayValue = 'Não Respondido';
-
+          
           if (answer) {
             displayValue = answer;
-
+            
+            // Formatação especial para datetime
             if (item.response_type === 'datetime') {
               try {
                 displayValue = format(new Date(answer), 'dd/MM/yyyy HH:mm');
-              } catch {
-                displayValue = answer;
+              } catch (e) {
+                displayValue = answer; // Fallback
               }
             }
           }
@@ -84,10 +86,10 @@ export async function generateAndUploadPDF(details: ServiceDetails): Promise<{ s
       throw new Error('O PDF gerado não é um Blob válido.');
     }
 
-    // 3. Fazer upload para o Supabase Storage
+    // 3. Fazer upload para o Supabase Storage usando 'pdf-reports'
     const fileName = `${service.id}-${format(new Date(), 'yyyyMMddHHmmss')}`;
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('pdf-reports')
+      .from('pdf-reports') // <-- Bucket atualizado para 'pdf-reports'
       .upload(`reports/${fileName}.pdf`, pdfBlob, {
         cacheControl: '3600',
         upsert: true,
@@ -98,7 +100,7 @@ export async function generateAndUploadPDF(details: ServiceDetails): Promise<{ s
 
     // 4. Obter a URL pública
     const { data: publicUrlData } = supabase.storage
-      .from('pdf-reports')
+      .from('pdf-reports') // <-- Bucket atualizado para 'pdf-reports'
       .getPublicUrl(`reports/${fileName}.pdf`);
 
     if (!publicUrlData?.publicUrl) {
