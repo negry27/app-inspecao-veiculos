@@ -178,7 +178,6 @@ export default function ClientsTab() {
     e.preventDefault();
     
     const modelYearCombined = `${vehicleForm.model.trim()}/${vehicleForm.year.trim()}`;
-    // Remove a máscara da placa para obter o valor bruto
     const rawPlate = vehicleForm.plate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
     if (!vehicleForm.model || !vehicleForm.year || !rawPlate) {
@@ -186,7 +185,6 @@ export default function ClientsTab() {
         return;
     }
     
-    // A placa deve ter exatamente 7 caracteres alfanuméricos (Mercosul ou antigo)
     if (rawPlate.length !== 7) {
         toast.error('A placa deve ter 7 caracteres (ex: ABC1234).');
         return;
@@ -204,14 +202,21 @@ export default function ClientsTab() {
             observations: vehicleForm.observations || null,
         }]);
 
-      if (error) throw error;
+      if (error) {
+        // Logar o erro detalhado do Supabase
+        console.error('Erro detalhado do Supabase:', error);
+        throw error;
+      }
+      
       toast.success('Veículo adicionado!');
       setVehicleDialogOpen(false);
       setVehicleForm({ type: 'car', model: '', year: '', plate: '', driver_name: '', observations: '' });
       loadClients();
     } catch (error: any) {
+      // Melhorar a exibição do erro
+      const errorMessage = error.message || 'Erro desconhecido ao adicionar veículo.';
       console.error('Erro ao adicionar veículo:', error);
-      toast.error(error.message || 'Erro ao adicionar veículo');
+      toast.error(`Erro ao adicionar veículo: ${errorMessage}`);
     }
   };
 
