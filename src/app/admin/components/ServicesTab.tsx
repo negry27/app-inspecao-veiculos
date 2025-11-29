@@ -82,6 +82,11 @@ export default function ServicesTab() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.client_id || !formData.vehicle_id || !formData.employee_id) {
+        toast.error('Por favor, selecione Cliente, Veículo e Funcionário.');
+        return;
+    }
 
     try {
       const { error } = await supabase
@@ -123,7 +128,7 @@ export default function ServicesTab() {
     const employeeDetail = service.employee?.[0];
 
     if (!clientDetail || !vehicleDetail || !employeeDetail) {
-        toast.error('Dados de cliente/veículo/funcionário incompletos para gerar PDF.');
+        toast.error('Dados de cliente/veículo/funcionário incompletos para gerar PDF. Edite o serviço e preencha o checklist.');
         return;
     }
 
@@ -207,7 +212,11 @@ export default function ServicesTab() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label>Cliente</Label>
-                <Select value={formData.client_id} onValueChange={(value) => setFormData({ ...formData, client_id: value })}>
+                <Select 
+                  value={formData.client_id} 
+                  onValueChange={(value) => setFormData({ ...formData, client_id: value })}
+                  required // Adicionado required
+                >
                   <SelectTrigger className="bg-[#0a0a0a] border-[#2a2a2a]">
                     <SelectValue placeholder="Selecione um cliente" />
                   </SelectTrigger>
@@ -222,7 +231,11 @@ export default function ServicesTab() {
               </div>
               <div className="space-y-2">
                 <Label>Veículo</Label>
-                <Select value={formData.vehicle_id} onValueChange={(value) => setFormData({ ...formData, vehicle_id: value })}>
+                <Select 
+                  value={formData.vehicle_id} 
+                  onValueChange={(value) => setFormData({ ...formData, vehicle_id: value })}
+                  required // Adicionado required
+                >
                   <SelectTrigger className="bg-[#0a0a0a] border-[#2a2a2a]">
                     <SelectValue placeholder="Selecione um veículo" />
                   </SelectTrigger>
@@ -237,7 +250,11 @@ export default function ServicesTab() {
               </div>
               <div className="space-y-2">
                 <Label>Funcionário</Label>
-                <Select value={formData.employee_id} onValueChange={(value) => setFormData({ ...formData, employee_id: value })}>
+                <Select 
+                  value={formData.employee_id} 
+                  onValueChange={(value) => setFormData({ ...formData, employee_id: value })}
+                  required // Adicionado required
+                >
                   <SelectTrigger className="bg-[#0a0a0a] border-[#2a2a2a]">
                     <SelectValue placeholder="Selecione um funcionário" />
                   </SelectTrigger>
