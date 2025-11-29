@@ -1,0 +1,1 @@
+ALTER TABLE public.vehicles ENABLE ROW LEVEL SECURITY;
