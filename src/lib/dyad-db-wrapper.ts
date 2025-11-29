@@ -53,8 +53,8 @@ export class Dyad {
     // A senha deve ser hasheada
     const hashedPassword = await bcrypt.hash(config.password, 10);
     
-    // Se a senha for '1234', definimos como temporária.
-    const isTemporary = config.password === '1234';
+    // Se a senha for '1234' ou 'admin', definimos como temporária.
+    const isTemporary = config.password === '1234' || config.password === 'admin';
 
     const { error } = await supabase
       .from('users')
@@ -66,7 +66,7 @@ export class Dyad {
         cargo: 'Administrador Master',
         status: 'active',
         is_master: true,
-        is_temporary_password: isTemporary, // Definido como TRUE se for a senha temporária
+        is_temporary_password: isTemporary,
         email_confirmed: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
