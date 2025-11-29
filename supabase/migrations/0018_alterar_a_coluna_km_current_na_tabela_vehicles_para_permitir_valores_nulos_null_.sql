@@ -1,0 +1,1 @@
+ALTER TABLE public.vehicles ALTER COLUMN km_current DROP NOT NULL;

@@ -188,8 +188,7 @@ export default function ClientsTab() {
         }]);
 
       if (error) {
-        // Logar o erro detalhado do Supabase
-        console.error('Erro detalhado do Supabase:', error);
+        console.log("ERRO REAL:", error); // Logando o erro detalhado
         throw error;
       }
       
