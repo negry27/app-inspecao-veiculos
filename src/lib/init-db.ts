@@ -7,12 +7,13 @@ export interface InitResult {
   user?: any;
 }
 
-// 🔐 Gere e substitua por uma chave real de 32 bytes (Mantido conforme o script do usuário)
+// 🔐 Gere e substitua por uma chave real de 32 bytes
 const ENCRYPTION_KEY = "MINHA_CHAVE_SECRETA_32_BYTES________";
 
-let dyad: Dyad | null = null;
+let dyadInstance: Dyad | null = null;
+let initializing = false;
 
-// Credenciais do Master (Mantidas as originais do projeto)
+// Credenciais do Master
 const MASTER_CONFIG = {
     email: "leonardo.negri@outlook.com.br",
     password: "Leonardoo28@#!",
@@ -20,19 +21,40 @@ const MASTER_CONFIG = {
 };
 
 /**
- * Inicializa o banco de dados e cria o usuário administrador master
+ * Aguarda inicialização se outra página já iniciou
+ */
+function waitForInit(): Promise<Dyad | null> {
+  return new Promise(resolve => {
+    const check = () => {
+      if (dyadInstance) return resolve(dyadInstance);
+      setTimeout(check, 50);
+    };
+    check();
+  });
+}
+
+/**
+ * Inicializa o Dyad, verifica e cria o usuário master de forma robusta.
+ * Retorna a instância do Dyad.
  */
 export async function initializeDatabase(): Promise<InitResult> {
-  try {
-    if (typeof window === 'undefined') {
-        // Não executar inicialização do DB no servidor
-        return { success: true, message: 'Server side initialization skipped.' };
-    }
-    
-    console.log("🔧 Inicializando Dyad Wrapper...");
+  if (typeof window === 'undefined') {
+    return { success: true, message: 'Server side initialization skipped.' };
+  }
+  
+  if (dyadInstance) return { success: true, message: 'Dyad já inicializado.' };
 
-    // 1. Inicializa o Dyad
-    dyad = new Dyad({
+  // Evita rodar em paralelo em duas telas
+  if (initializing) {
+    await waitForInit();
+    return { success: true, message: 'Dyad inicializado por outra instância.' };
+  }
+
+  initializing = true;
+  console.log("🔧 Inicializando Dyad...");
+
+  try {
+    const dyad = new Dyad({
       encryptionKey: ENCRYPTION_KEY,
       namespace: "my-app-db",
       verbose: true,
@@ -40,47 +62,53 @@ export async function initializeDatabase(): Promise<InitResult> {
 
     await dyad.init();
 
-    console.log("✔ Dyad Wrapper inicializado");
+    // 2. Verifica se já existe master
+    let hasMaster = false;
 
-    // 2. Verifica se já existe usuário master
-    const hasMaster = await dyad.hasUserMaster();
+    try {
+      hasMaster = await dyad.hasUserMaster();
+    } catch (err) {
+      console.warn("⚠ Falha ao verificar master, resetando banco...");
+      await dyad.reset();
+      hasMaster = false; // Força a criação após o reset
+    }
 
     if (!hasMaster) {
       console.log("👤 Nenhum master encontrado. Criando...");
-
       try {
         await dyad.createUserMaster(MASTER_CONFIG);
-
-        console.log("✔ Usuário master criado com sucesso");
-
+        console.log("✔ Master criado com sucesso");
       } catch (err: any) {
-        console.error("❌ Falha ao criar usuário master:", err);
+        const errorMessage = String(err);
+        
+        if (errorMessage.includes("duplicate") || errorMessage.includes("unique")) {
+          console.warn("✔ Master já existia — ignorando criação");
+        } else {
+          console.error("❌ Erro ao criar master, resetando banco...", err);
+          await dyad.reset();
 
-        // Se o erro for silencioso ({}) ou banco corrompido → reset total
-        console.warn("⚠ Tentando resetar banco e recriar...");
-
-        await dyad.reset(); // limpa o master
-
-        // Tenta recriar
-        await dyad.createUserMaster(MASTER_CONFIG);
-
-        console.log("✔ Banco resetado e master recriado");
+          // Tenta novamente
+          await dyad.createUserMaster(MASTER_CONFIG);
+          console.log("✔ Banco resetado e master recriado");
+        }
       }
-
     } else {
-      console.log("✔ Usuário master já existe. Nada a criar.");
+      console.log("✔ Master já existe, seguindo normalmente");
     }
-    
+
+    dyadInstance = dyad;
     return { success: true, message: 'Inicialização completa.' };
 
   } catch (error: any) {
-    console.error("❌ Erro crítico ao inicializar o banco:", error);
+    console.error("❌ Erro crítico no Dyad:", error);
 
     // Último recurso → limpar base quebrada
-    if (dyad) {
-      await dyad.reset();
+    if (dyadInstance) {
+      await dyadInstance.reset();
     }
     
     return { success: false, error: error.message || 'Erro crítico na inicialização.' };
+  } finally {
+    initializing = false;
   }
 }
