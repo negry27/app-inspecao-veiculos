@@ -24,6 +24,7 @@ export default function ServiceHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<ServiceRecord[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -55,12 +56,52 @@ export default function ServiceHistoryPage() {
     }
   };
   
-  const handleDownloadPDF = (url: string | null) => {
-    if (url) {
-      // Abre a URL do PDF em uma nova aba
-      window.open(url, '_blank');
-    } else {
+  const handleDownloadPDF = async (service: ServiceRecord) => {
+    const url = service.pdf_url;
+    const vehicleDetail = service.vehicle?.[0];
+
+    if (!url) {
       toast.error('URL do PDF não disponível. O PDF pode estar pendente de geração.');
+      return;
+    }
+    
+    setDownloadingId(service.id);
+
+    try {
+      // Extrai o caminho do arquivo do URL público
+      const urlParts = url.split('/public/pdf-reports/');
+      if (urlParts.length < 2) {
+          throw new Error('URL do PDF inválida.');
+      }
+      const filePath = urlParts[1];
+      
+      // Usa a função download do Supabase Storage para forçar o download
+      const { data, error } = await supabase.storage
+        .from('pdf-reports')
+        .download(filePath);
+
+      if (error) throw error;
+
+      if (data) {
+        const blobUrl = window.URL.createObjectURL(data);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        // Define o nome do arquivo para download
+        link.setAttribute('download', `${service.id.substring(0, 8)}-${vehicleDetail?.plate || 'report'}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(blobUrl);
+        toast.success('Download iniciado!');
+      } else {
+        throw new Error('Nenhum dado de arquivo retornado.');
+      }
+
+    } catch (error) {
+      console.error('Erro ao baixar PDF:', error);
+      toast.error('Erro ao baixar PDF. Tente novamente.');
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -121,11 +162,15 @@ export default function ServiceHistoryPage() {
                       
                       <Button
                         size="sm"
-                        onClick={() => handleDownloadPDF(service.pdf_url)}
-                        disabled={!pdfAvailable}
+                        onClick={() => handleDownloadPDF(service)}
+                        disabled={!pdfAvailable || downloadingId === service.id}
                         className={`h-8 text-xs ${pdfAvailable ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 opacity-50 cursor-not-allowed'}`}
                       >
-                        <Download className="w-3 h-3 mr-1" />
+                        {downloadingId === service.id ? (
+                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                        ) : (
+                            <Download className="w-3 h-3 mr-1" />
+                        )}
                         {pdfAvailable ? 'Baixar PDF' : 'PDF Pendente'}
                       </Button>
                     </div>
