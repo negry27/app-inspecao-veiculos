@@ -70,23 +70,23 @@ export default function AdminPage() {
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="employees" className="space-y-6">
           <TabsList className="grid w-full grid-cols-5 bg-[#1a1a1a] border border-[#2a2a2a]">
-            <TabsTrigger value="employees" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
+            <TabsTrigger value="employees" className="text-white data-[state=active]:bg-red-600 data-[state=active]:text-white">
               <Users className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Funcionários</span>
             </TabsTrigger>
-            <TabsTrigger value="clients" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
+            <TabsTrigger value="clients" className="text-white data-[state=active]:bg-red-600 data-[state=active]:text-white">
               <Car className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Clientes</span>
             </TabsTrigger>
-            <TabsTrigger value="checklist" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
+            <TabsTrigger value="checklist" className="text-white data-[state=active]:bg-red-600 data-[state=active]:text-white">
               <ClipboardList className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Checklist</span>
             </TabsTrigger>
-            <TabsTrigger value="services" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
+            <TabsTrigger value="services" className="text-white data-[state=active]:bg-red-600 data-[state=active]:text-white">
               <FileText className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Serviços</span>
             </TabsTrigger>
-            <TabsTrigger value="cargos" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
+            <TabsTrigger value="cargos" className="text-white data-[state=active]:bg-red-600 data-[state=active]:text-white">
               <Briefcase className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Cargos</span>
             </TabsTrigger>
