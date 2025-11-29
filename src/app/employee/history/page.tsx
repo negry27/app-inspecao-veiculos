@@ -152,7 +152,9 @@ export default function ServiceHistoryPage() {
                           <FileText className="w-4 h-4 text-blue-400" />
                           Inspeção ID: <span className="text-blue-400 truncate max-w-[150px] sm:max-w-none">{service.id.substring(0, 8)}...</span>
                         </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 text-xs">
+                        
+                        {/* Detalhes do Cliente e Veículo em uma linha responsiva */}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-2 text-xs">
                             <div className="flex items-center gap-1 text-gray-400">
                                 <User className="w-3 h-3" />
                                 Cliente: <span className="text-white font-medium">{clientName}</span>
@@ -162,6 +164,7 @@ export default function ServiceHistoryPage() {
                                 Veículo: <span className="text-white font-medium">{vehicleModel} ({vehiclePlate})</span>
                             </div>
                         </div>
+                        
                         <p className="text-xs text-gray-500 mt-2">
                           Data: {format(new Date(service.created_at), 'dd/MM/yyyy HH:mm')}
                         </p>
