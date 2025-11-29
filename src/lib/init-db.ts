@@ -16,7 +16,7 @@ let initializing = false;
 // Credenciais do Master (Atualizadas)
 const MASTER_CONFIG = {
     email: "leonardo.negri@outlook.com.br", // Mantém o email como identificador único
-    password: "newmasterpassword123", // Nova senha temporária
+    password: "1234", // Nova senha TEMPORÁRIA
     name: "Leonardo Negri", // Novo nome de usuário
 };
 

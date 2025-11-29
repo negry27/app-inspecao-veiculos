@@ -50,19 +50,20 @@ export class Dyad {
         throw new Error("Attempted to create master user with incorrect email.");
     }
     
+    // A senha temporária deve ser hasheada
     const hashedPassword = await bcrypt.hash(config.password, 10);
 
     const { error } = await supabase
       .from('users')
       .insert({
         email: config.email,
-        username: config.name, // Usando o nome fornecido como username
+        username: config.name,
         password_hash: hashedPassword,
         role: 'admin',
         cargo: 'Administrador Master',
         status: 'active',
         is_master: true,
-        is_temporary_password: false,
+        is_temporary_password: true, // Definido como TRUE para forçar a troca
         email_confirmed: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
