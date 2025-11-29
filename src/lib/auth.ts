@@ -158,8 +158,7 @@ export function isMaster(user: any): boolean {
  * Cria um novo usuário (apenas administradores)
  */
 export async function createUser(
-  email: string,
-  username: string,
+  username: string, // Email removido da assinatura
   password: string,
   role: 'admin' | 'employee',
   cargo?: string
@@ -173,22 +172,25 @@ export async function createUser(
     }
 
     // Validar dados
-    if (!email || !username || !password) {
-      return { success: false, error: 'Todos os campos são obrigatórios' };
+    if (!username || !password) {
+      return { success: false, error: 'Usuário e Senha são obrigatórios' };
     }
 
     if (password.length < 6) {
       return { success: false, error: 'A senha deve ter no mínimo 6 caracteres' };
     }
+    
+    // Usamos o username como email para satisfazer a restrição UNIQUE NOT NULL do banco
+    const email = username; 
 
-    // Verificar se já existe usuário com este email ou username
+    // Verificar se já existe usuário com este username (e, implicitamente, email)
     const { data: existingUsers } = await supabase
       .from('users')
-      .select('email, username')
+      .select('username')
       .or(`email.eq.${email},username.eq.${username}`);
 
     if (existingUsers && existingUsers.length > 0) {
-      return { success: false, error: 'Email ou usuário já cadastrado' };
+      return { success: false, error: 'Usuário já cadastrado' };
     }
 
     // Criar hash da senha
@@ -198,7 +200,7 @@ export async function createUser(
     const { data: newUser, error } = await supabase
       .from('users')
       .insert({
-        email,
+        email, // Usando username como email
         username,
         password_hash: hashedPassword,
         role,
@@ -323,7 +325,7 @@ export async function deleteUser(userId: string) {
 
     // Verificar se está tentando deletar a si mesmo
     if (userId === currentUser.id) {
-      return { success: false, error: 'Você não pode deletar sua própria conta' };
+      return { success: false, error: 'Você não pode desativar sua própria conta' };
     }
 
     // Verificar se o usuário a ser deletado é master

@@ -19,7 +19,6 @@ export default function EmployeesTab() {
   const [editingEmployee, setEditingEmployee] = useState<any>(null);
   const [formData, setFormData] = useState({
     username: '',
-    email: '',
     password: '',
     cargo: '',
     status: 'active' as 'active' | 'inactive'
@@ -72,13 +71,21 @@ export default function EmployeesTab() {
         toast.success('Funcionário atualizado com sucesso!');
       } else {
         // Criar novo funcionário
+        if (!formData.username || !formData.password || !formData.cargo) {
+            toast.error('Todos os campos são obrigatórios');
+            return;
+        }
+        
         const hashedPassword = await bcrypt.hash(formData.password, 10);
+
+        // Usamos o username como email para satisfazer a restrição UNIQUE NOT NULL do banco
+        const email = formData.username; 
 
         const { error } = await supabase
           .from('users')
           .insert([{
             username: formData.username,
-            email: formData.email,
+            email: email, // Usando username como email
             password_hash: hashedPassword,
             role: 'employee',
             cargo: formData.cargo,
@@ -92,7 +99,7 @@ export default function EmployeesTab() {
 
       setDialogOpen(false);
       setEditingEmployee(null);
-      setFormData({ username: '', email: '', password: '', cargo: '', status: 'active' });
+      setFormData({ username: '', password: '', cargo: '', status: 'active' });
       loadEmployees();
     } catch (error: any) {
       toast.error(error.message || 'Erro ao salvar funcionário');
@@ -143,7 +150,6 @@ export default function EmployeesTab() {
     setEditingEmployee(employee);
     setFormData({
       username: employee.username,
-      email: employee.email,
       password: '',
       cargo: employee.cargo,
       status: employee.status
@@ -167,7 +173,7 @@ export default function EmployeesTab() {
           <DialogTrigger asChild>
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => {
               setEditingEmployee(null);
-              setFormData({ username: '', email: '', password: '', cargo: '', status: 'active' });
+              setFormData({ username: '', password: '', cargo: '', status: 'active' });
             }}>
               <Plus className="w-4 h-4 mr-2" />
               Novo Funcionário
@@ -189,18 +195,7 @@ export default function EmployeesTab() {
                   className="bg-[#0a0a0a] border-[#2a2a2a]"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                  disabled={!!editingEmployee}
-                  className="bg-[#0a0a0a] border-[#2a2a2a]"
-                />
-              </div>
+              {/* Campo de E-mail removido */}
               <div className="space-y-2">
                 <Label htmlFor="password">{editingEmployee ? 'Nova Senha (deixe vazio para não alterar)' : 'Senha Temporária'}</Label>
                 <Input
@@ -255,7 +250,7 @@ export default function EmployeesTab() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="text-sm text-gray-400">
-                <p><strong>Email:</strong> {employee.email}</p>
+                {/* <p><strong>Email:</strong> {employee.email}</p> Removido */}
                 <p><strong>Cargo:</strong> {employee.cargo}</p>
               </div>
               <div className="flex gap-2">
