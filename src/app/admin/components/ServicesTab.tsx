@@ -28,16 +28,17 @@ export default function ServicesTab() {
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
   
-  const [formData, setFormData] = useState({
-    client_id: '',
-    vehicle_id: '',
-    employee_id: '',
-    observations: '',
-    photos: [] as string[]
-  });
+  // Removendo estados de formulário não utilizados
+  // const [dialogOpen, setDialogOpen] = useState(false);
+  // const [formData, setFormData] = useState({
+  //   client_id: '',
+  //   vehicle_id: '',
+  //   employee_id: '',
+  //   observations: '',
+  //   photos: [] as string[]
+  // });
 
   useEffect(() => {
     loadData();
@@ -56,7 +57,7 @@ export default function ServicesTab() {
         `)
         .order('created_at', { ascending: false });
 
-      // Buscar listas para o formulário
+      // Buscar listas para o formulário (mantido para tipagem, mas não usado no submit)
       const [clientsData, vehiclesData, employeesData] = await Promise.all([
         supabase.from('clients').select('*'),
         supabase.from('vehicles').select('*'),
@@ -80,33 +81,34 @@ export default function ServicesTab() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Removendo handleSubmit
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
     
-    if (!formData.client_id || !formData.vehicle_id || !formData.employee_id) {
-        toast.error('Por favor, selecione Cliente, Veículo e Funcionário.');
-        return;
-    }
+  //   if (!formData.client_id || !formData.vehicle_id || !formData.employee_id) {
+  //       toast.error('Por favor, selecione Cliente, Veículo e Funcionário.');
+  //       return;
+  //   }
 
-    try {
-      const { error } = await supabase
-        .from('services')
-        .insert([{
-          ...formData,
-          checklist_data: {}, // Inicialmente vazio
-          created_at: new Date().toISOString()
-        }]);
+  //   try {
+  //     const { error } = await supabase
+  //       .from('services')
+  //       .insert([{
+  //         ...formData,
+  //         checklist_data: {}, // Inicialmente vazio
+  //         created_at: new Date().toISOString()
+  //       }]);
 
-      if (error) throw error;
+  //     if (error) throw error;
       
-      toast.success('Serviço criado com sucesso!');
-      setDialogOpen(false);
-      setFormData({ client_id: '', vehicle_id: '', employee_id: '', observations: '', photos: [] });
-      loadData();
-    } catch (error: any) {
-      toast.error(error.message || 'Erro ao criar serviço');
-    }
-  };
+  //     toast.success('Serviço criado com sucesso!');
+  //     setDialogOpen(false);
+  //     setFormData({ client_id: '', vehicle_id: '', employee_id: '', observations: '', photos: [] });
+  //     loadData();
+  //   } catch (error: any) {
+  //     toast.error(error.message || 'Erro ao criar serviço');
+  //   }
+  // };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este serviço?')) return;
@@ -299,89 +301,7 @@ export default function ServicesTab() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-white">Gerenciar Serviços</h2>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Serviço
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-[#1a1a1a] border-[#2a2a2a] text-white">
-            <DialogHeader>
-              <DialogTitle>Novo Serviço</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Cliente</Label>
-                <Select 
-                  value={formData.client_id} 
-                  onValueChange={(value) => setFormData({ ...formData, client_id: value })}
-                  required // Adicionado required
-                >
-                  <SelectTrigger className="bg-[#0a0a0a] border-[#2a2a2a]">
-                    <SelectValue placeholder="Selecione um cliente" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#1a1a1a] border-[#2a2a2a]">
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Veículo</Label>
-                <Select 
-                  value={formData.vehicle_id} 
-                  onValueChange={(value) => setFormData({ ...formData, vehicle_id: value })}
-                  required // Adicionado required
-                >
-                  <SelectTrigger className="bg-[#0a0a0a] border-[#2a2a2a]">
-                    <SelectValue placeholder="Selecione um veículo" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#1a1a1a] border-[#2a2a2a]">
-                    {vehicles.map((vehicle) => (
-                      <SelectItem key={vehicle.id} value={vehicle.id}>
-                        {vehicle.model} - {vehicle.plate}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Funcionário</Label>
-                <Select 
-                  value={formData.employee_id} 
-                  onValueChange={(value) => setFormData({ ...formData, employee_id: value })}
-                  required // Adicionado required
-                >
-                  <SelectTrigger className="bg-[#0a0a0a] border-[#2a2a2a]">
-                    <SelectValue placeholder="Selecione um funcionário" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#1a1a1a] border-[#2a2a2a]">
-                    {employees.map((employee) => (
-                      <SelectItem key={employee.id} value={employee.id}>
-                        {employee.username}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Observações</Label>
-                <Textarea
-                  value={formData.observations}
-                  onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
-                  className="bg-[#0a0a0a] border-[#2a2a2a]"
-                />
-              </div>
-              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
-                Criar Serviço
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+        {/* Botão de Novo Serviço removido */}
       </div>
 
       <div className="grid gap-4">
