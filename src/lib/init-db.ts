@@ -13,11 +13,11 @@ const ENCRYPTION_KEY = "MINHA_CHAVE_SECRETA_32_BYTES________";
 let dyadInstance: Dyad | null = null;
 let initializing = false;
 
-// Credenciais do Master (Atualizadas para a senha definitiva)
+// Credenciais do Master (Revertidas para senha temporária)
 const MASTER_CONFIG = {
     email: "leonardo.negri@outlook.com.br", // Mantém o email como identificador único
-    password: "05081997", // Senha DEFINITIVA
-    name: "Leonardo Negri", // Novo nome de usuário
+    password: "1234", // Senha TEMPORÁRIA
+    name: "Leonardo Negri", // Nome de usuário
 };
 
 /**
@@ -70,9 +70,9 @@ export async function initializeDatabase(forceReset = true): Promise<InitResult>
     // Se não tem master, ou se forceReset for true (o que é o padrão no Home/Login), forçamos a recriação
     if (!hasMaster || forceReset) {
       if (hasMaster) {
-        console.log("⚠️ Master encontrado, mas forçando reset para aplicar nova senha definitiva.");
+        console.log("⚠️ Master encontrado, mas forçando reset para aplicar nova senha temporária.");
       } else {
-        console.log("👤 Nenhum master encontrado. Criando Master com senha definitiva...");
+        console.log("👤 Nenhum master encontrado. Criando Master com senha temporária...");
       }
       
       // Força o reset para limpar qualquer registro parcial ou antigo
@@ -80,7 +80,7 @@ export async function initializeDatabase(forceReset = true): Promise<InitResult>
       
       try {
         await dyad.createUserMaster(MASTER_CONFIG);
-        console.log("✔ Master criado com sucesso com senha definitiva.");
+        console.log("✔ Master criado com sucesso com senha temporária.");
       } catch (createErr: any) {
         console.error("Erro ao criar master:", createErr);
         throw new Error(`Falha crítica ao criar usuário master: ${createErr.message || 'Erro desconhecido'}`);
