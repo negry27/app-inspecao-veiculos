@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Edit, Trash2, Car as CarIcon, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatPlateDisplay } from '@/lib/utils'; // Removido formatPhoneNumber
+import { formatPlateDisplay } from '@/lib/utils';
+import { getCurrentUser } from '@/lib/auth'; // Importando getCurrentUser
 
 // Função de formatação de telefone (mantida aqui para o onChange)
 const formatPhoneNumberLocal = (value: string) => {
@@ -110,6 +111,12 @@ export default function ClientsTab() {
         toast.error('O nome do cliente é obrigatório.');
         return;
     }
+    
+    const currentUser = getCurrentUser();
+    if (!currentUser || !currentUser.id) {
+        toast.error('Sessão expirada ou usuário não autenticado.');
+        return;
+    }
 
     try {
       // Limpar o telefone: remove a máscara antes de salvar no banco
@@ -118,12 +125,20 @@ export default function ClientsTab() {
       const clientData = {
         name: clientForm.name.trim(),
         phone: rawPhone || null, // Salva apenas números ou null
+        user_id: currentUser.id, // Adicionando o user_id para satisfazer o RLS
       };
 
       if (editingClient) {
+        // Ao atualizar, não precisamos enviar o user_id novamente, mas garantimos que a política de UPDATE permite
+        const updateData = {
+            name: clientForm.name.trim(),
+            phone: rawPhone || null,
+            updated_at: new Date().toISOString()
+        };
+        
         const { error } = await supabase
           .from('clients')
-          .update({ ...clientData, updated_at: new Date().toISOString() })
+          .update(updateData)
           .eq('id', editingClient.id);
 
         if (error) throw error;
@@ -142,7 +157,8 @@ export default function ClientsTab() {
       setClientForm({ name: '', phone: '' });
       loadClients();
     } catch (error: any) {
-      toast.error(error.message || 'Erro ao salvar cliente');
+      console.error('Erro ao salvar cliente:', error);
+      toast.error(error.message || 'Erro ao salvar cliente. Verifique se você está logado.');
     }
   };
   
