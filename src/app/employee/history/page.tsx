@@ -55,11 +55,12 @@ export default function ServiceHistoryPage() {
     }
   };
   
-  const handleDownloadPDF = (url: string) => {
+  const handleDownloadPDF = (url: string | null) => {
     if (url) {
+      // Abre a URL do PDF em uma nova aba
       window.open(url, '_blank');
     } else {
-      toast.error('URL do PDF não disponível.');
+      toast.error('URL do PDF não disponível. O PDF pode estar pendente de geração.');
     }
   };
 
@@ -101,6 +102,7 @@ export default function ServiceHistoryPage() {
                   const clientName = service.client?.[0]?.name || 'N/A';
                   const vehicleModel = service.vehicle?.[0]?.model || 'N/A';
                   const vehiclePlate = service.vehicle?.[0]?.plate || 'N/A';
+                  const pdfAvailable = !!service.pdf_url;
 
                   return (
                     <div key={service.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-[#0a0a0a] p-4 rounded-lg border border-[#2a2a2a]">
@@ -119,12 +121,12 @@ export default function ServiceHistoryPage() {
                       
                       <Button
                         size="sm"
-                        onClick={() => handleDownloadPDF(service.pdf_url!)}
-                        disabled={!service.pdf_url}
-                        className={`h-8 text-xs ${service.pdf_url ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 opacity-50 cursor-not-allowed'}`}
+                        onClick={() => handleDownloadPDF(service.pdf_url)}
+                        disabled={!pdfAvailable}
+                        className={`h-8 text-xs ${pdfAvailable ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 opacity-50 cursor-not-allowed'}`}
                       >
                         <Download className="w-3 h-3 mr-1" />
-                        {service.pdf_url ? 'Baixar PDF' : 'PDF Pendente'}
+                        {pdfAvailable ? 'Baixar PDF' : 'PDF Pendente'}
                       </Button>
                     </div>
                   );
