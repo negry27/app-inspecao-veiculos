@@ -19,7 +19,7 @@ interface PDFData {
   };
   vehicle: {
     type: string;
-    model: string; 
+    model_year: string; // Alterado de 'model' para 'model_year'
     plate: string;
     driver_name?: string; 
     km_current?: number; // Adicionado km_current
@@ -105,10 +105,10 @@ export async function generateAndUploadPDF(details: ServiceDetails): Promise<{ s
       },
       vehicle: {
         type: finalVehicle.type,
-        model: finalVehicle.model, 
+        model_year: finalVehicle.model_year, // Usando model_year
         plate: finalVehicle.plate,
         driver_name: finalVehicle.driver_name, 
-        km_current: finalVehicle.km_current,
+        km_current: (finalVehicle as any).km_current, // km_current não está na interface Vehicle, mas pode estar no DB
       },
       checklist: checklistDataFormatted,
       observations: service.observations || '',
@@ -165,7 +165,7 @@ export async function generateAndUploadPDF(details: ServiceDetails): Promise<{ s
     doc.setFont('helvetica', 'normal');
     doc.text(`Tipo: ${pdfData.vehicle.type}`, 20, yPosition);
     yPosition += 5;
-    doc.text(`Modelo: ${pdfData.vehicle.model}`, 20, yPosition); 
+    doc.text(`Modelo/Ano: ${pdfData.vehicle.model_year}`, 20, yPosition); // Usando model_year
     yPosition += 5;
     doc.text(`Placa: ${pdfData.vehicle.plate}`, 20, yPosition);
     yPosition += 5;
