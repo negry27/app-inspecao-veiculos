@@ -345,13 +345,14 @@ export default function ClientsTab() {
             <div className="space-y-2">
               <Label>Tipo</Label>
               <Select value={vehicleForm.type} onValueChange={(value: any) => setVehicleForm({ ...vehicleForm, type: value })}>
-                <SelectTrigger className="bg-[#0a0a0a] border-[#2a2a2a]">
+                <SelectTrigger className="bg-[#0a0a0a] border-[#2a2a2a] text-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-[#1a1a1a] border-[#2a2a2a]">
-                  <SelectItem value="car">Carro</SelectItem>
-                  <SelectItem value="motorcycle">Moto</SelectItem>
-                  <SelectItem value="van">Van</SelectItem>
+                  {/* Adicionando text-white ao SelectItem */}
+                  <SelectItem value="car" className="text-white">Carro</SelectItem>
+                  <SelectItem value="motorcycle" className="text-white">Moto</SelectItem>
+                  <SelectItem value="van" className="text-white">Van</SelectItem>
                 </SelectContent>
               </Select>
             </div>
